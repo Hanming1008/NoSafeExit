@@ -1,9 +1,46 @@
+# =========================
+# Unity generated folders
+# =========================
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
 [Ll]ogs/
 UserSettings/
-.vs/
+MemoryCaptures/
+Recordings/
+CrashReports/
+
+# =========================
+# Build outputs
+# =========================
 [Bb]uild/
 [Bb]uilds/
+
+# =========================
+# IDE / Editor files
+# =========================
+.vs/
+.vscode/
+.idea/
+
+# Visual Studio / Rider generated project files (Unity will regenerate)
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# =========================
+# OS generated files
+# =========================
 .DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini

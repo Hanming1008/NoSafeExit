@@ -29,6 +29,12 @@ public class PlayerShoot : MonoBehaviour
     public float gunshotRadius = 25f;
 
     private float nextFireTime;
+    private PlayerAnimatorBridge animatorBridge;
+
+    private void Awake()
+    {
+        animatorBridge = GetComponent<PlayerAnimatorBridge>();
+    }
 
     private void Update()
     {
@@ -49,6 +55,8 @@ public class PlayerShoot : MonoBehaviour
         SpawnMuzzleFlash();
         SpawnShell();
         GunshotSystem.Emit(muzzle.position, gunshotRadius);
+        if (animatorBridge != null)
+            animatorBridge.TriggerShoot();
 
         nextFireTime = Time.time + 1f / fireRate;
     }

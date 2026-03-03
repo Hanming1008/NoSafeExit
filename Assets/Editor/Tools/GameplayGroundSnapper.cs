@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.SceneManagement;using JUTPS.ItemSystem;
+
 
 public static class GameplayGroundSnapper
 {
@@ -25,7 +26,6 @@ public static class GameplayGroundSnapper
         var seen = new HashSet<int>();
 
         AddTargets(PlayerStatsTargets(), targets, seen, "Player");
-        AddTargets(EnemyTargets(), targets, seen, "Enemy");
         AddTargets(LootTargets(), targets, seen, "Loot");
         AddTargets(ExtractionTargets(), targets, seen, "Extraction");
 
@@ -68,19 +68,9 @@ public static class GameplayGroundSnapper
         }
     }
 
-    private static IEnumerable<Transform> EnemyTargets()
+private static IEnumerable<Transform> LootTargets()
     {
-        EnemyStats[] enemies = UnityEngine.Object.FindObjectsByType<EnemyStats>(FindObjectsSortMode.None);
-        for (int i = 0; i < enemies.Length; i++)
-        {
-            if (enemies[i] != null)
-                yield return enemies[i].transform;
-        }
-    }
-
-    private static IEnumerable<Transform> LootTargets()
-    {
-        LootItem[] loots = UnityEngine.Object.FindObjectsByType<LootItem>(FindObjectsSortMode.None);
+        JUItem[] loots = UnityEngine.Object.FindObjectsByType<JUItem>(FindObjectsSortMode.None);
         for (int i = 0; i < loots.Length; i++)
         {
             if (loots[i] != null)

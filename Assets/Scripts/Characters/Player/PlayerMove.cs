@@ -14,6 +14,10 @@ public class PlayerMove : MonoBehaviour
     private Vector3 velocity;
     private bool isSprinting;
 
+    public float CurrentPlanarSpeed { get; private set; }
+    public float CurrentNormalizedSpeed { get; private set; }
+    public bool IsSprinting => isSprinting;
+
     void Awake()
     {
         controller = GetComponent<CharacterController>();
@@ -52,12 +56,16 @@ public class PlayerMove : MonoBehaviour
         if (isSprinting)
             speed = runSpeed;
 
-        controller.Move(move * speed * Time.deltaTime);
-
         if (controller.isGrounded && velocity.y < 0f)
             velocity.y = -2f;
 
         velocity.y += gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
+
+        Vector3 motion = move * speed;
+        motion.y = velocity.y;
+        controller.Move(motion * Time.deltaTime);
+
+        CurrentPlanarSpeed = hasMoveInput ? speed : 0f;
+        CurrentNormalizedSpeed = Mathf.Clamp01(CurrentPlanarSpeed / Mathf.Max(0.01f, runSpeed));
     }
 }

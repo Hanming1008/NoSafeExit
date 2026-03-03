@@ -410,9 +410,16 @@ namespace MCPForUnity.Editor.Helpers
             foreach (var propInfo in cachedData.SerializableProperties)
             {
                 string propName = propInfo.Name;
+                string propertyTypeName = propInfo.PropertyType?.FullName;
 
                 // --- Skip known obsolete/problematic Component shortcut properties ---
                 bool skipProperty = false;
+                // Unity 6: Accessing Collider.GeometryHolder can hard-crash the editor (native AV).
+                if (propName == "GeometryHolder" || propertyTypeName == "UnityEngine.LowLevelPhysics.GeometryHolder")
+                {
+                    skipProperty = true;
+                }
+
                 if (propName == "rigidbody" || propName == "rigidbody2D" || propName == "camera" ||
                     propName == "light" || propName == "animation" || propName == "constantForce" ||
                     propName == "renderer" || propName == "audio" || propName == "networkView" ||

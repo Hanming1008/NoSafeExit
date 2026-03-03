@@ -183,6 +183,20 @@ namespace MCPForUnity.Editor.Tools
         {
             if (!_handlers.TryGetValue(commandName, out var handler))
             {
+                // Backward-compat: some MCP clients still probe this legacy command.
+                // Return a harmless no-op instead of throwing/logging an error each poll.
+                if (string.Equals(commandName, "get_tool_states", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new HandlerInfo(
+                        commandName,
+                        _ => new
+                        {
+                            toolStates = Array.Empty<object>()
+                        },
+                        null
+                    );
+                }
+
                 throw new InvalidOperationException(
                     $"Unknown or unsupported command type: {commandName}"
                 );

@@ -3,8 +3,18 @@
 Top-down extraction shooter prototype made with Unity.
 
 ## Latest Release
-- v0.3.0 Third Playable
-- https://github.com/Hanming1008/NoSafeExit/releases/tag/v0.3.0
+- v0.4.0 Combat Systems and Feedback Upgrade
+- https://github.com/Hanming1008/NoSafeExit/releases/tag/v0.4.0
+
+## v0.4.0 Update Highlights
+- Added an ammo capacity system
+- Added body-part damage multipliers
+- Added health display
+- Added enemy alert indicators for different awareness states
+- Added damage feedback when the player is hit
+- Added crosshair feedback that changes based on hit body part
+- Fixed close-range aiming accuracy issues
+- Fixed character movement getting stuck when sliding against walls/obstacles
 
 ## Current Features
 - Top-down combat + extraction core gameplay loop

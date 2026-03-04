@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -14,6 +14,7 @@ namespace JUTPS.InventorySystem.UI
 
         [Header("Essentials")]
         public Sprite EmptySprite;
+        public Sprite OverrideWeaponIcon;
         public Image Icon;
         public Text ItemName;
         public Text ItemQuantity;
@@ -23,6 +24,10 @@ namespace JUTPS.InventorySystem.UI
         void Start()
         {
             //Player = JUGameManager.PlayerController;
+            if (OverrideWeaponIcon == null)
+            {
+                OverrideWeaponIcon = Resources.Load<Sprite>("UI/OIP");
+            }
         }
 
         // Update is called once per frame
@@ -36,51 +41,51 @@ namespace JUTPS.InventorySystem.UI
 
             if (Player.Inventory == null) return;
 
+            // Keep header fixed.
+            ItemName.text = "Player";
             CurrentItem = Player.HoldableItemInUseRightHand;
+            bool showingWeapon = CurrentItem is Weapon;
+
+            if (ItemQuantity != null)
+            {
+                ItemQuantity.text = showingWeapon ? "HK416" : string.Empty;
+                if (ItemQuantity.gameObject.activeSelf != showingWeapon)
+                {
+                    ItemQuantity.gameObject.SetActive(showingWeapon);
+                }
+            }
 
             if (CurrentItem == null)
             {
                 Icon.sprite = EmptySprite;
                 BulletLabel.SetActive(false);
-                ItemName.text = "Hand";
-                ItemQuantity.text = "";
                 ItemHealth.fillAmount = 1;
+                return;
             }
-            else
+
+            if (CurrentItem is Weapon weapon)
             {
-                if (CurrentItem is Weapon)
-                {
-                    Icon.sprite = CurrentItem.ItemIcon;
-                    ItemName.text = CurrentItem.ItemName;
-                    ItemQuantity.text = CurrentItem.ItemQuantity + "/" + CurrentItem.MaxItemQuantity;
-
-                    BulletLabel.SetActive(true);
-                    BulletQuantity.text = ((Weapon)CurrentItem).BulletsAmounts + "/" + ((Weapon)CurrentItem).TotalBullets;
-                    ItemHealth.fillAmount = (float)((Weapon)CurrentItem).BulletsAmounts / (float)((Weapon)CurrentItem).BulletsPerMagazine;
-                    return;
-                }
-
-                if (CurrentItem is JUHoldableItem || CurrentItem is ThrowableItem)
-                {
-                    Icon.sprite = CurrentItem.ItemIcon;
-                    ItemName.text = CurrentItem.ItemName;
-                    ItemQuantity.text = CurrentItem.ItemQuantity + "/" + CurrentItem.MaxItemQuantity;
-
-                    BulletLabel.SetActive(false);
-                    ItemHealth.fillAmount = (float)CurrentItem.ItemQuantity / (float)CurrentItem.MaxItemQuantity;
-                }
-
-                if (CurrentItem is MeleeWeapon)
-                {
-                    Icon.sprite = CurrentItem.ItemIcon;
-                    ItemName.text = CurrentItem.ItemName;
-                    ItemQuantity.text = CurrentItem.ItemQuantity + "/" + CurrentItem.MaxItemQuantity;
-
-                    BulletLabel.SetActive(false);
-                    ItemHealth.fillAmount = (float)((MeleeWeapon)CurrentItem).MeleeWeaponHealth / 100;
-
-                }
+                Icon.sprite = OverrideWeaponIcon != null ? OverrideWeaponIcon : CurrentItem.ItemIcon;
+                BulletLabel.SetActive(true);
+                BulletQuantity.text = weapon.BulletsAmounts + "/" + weapon.TotalBullets;
+                ItemHealth.fillAmount = weapon.BulletsPerMagazine > 0
+                    ? (float)weapon.BulletsAmounts / weapon.BulletsPerMagazine
+                    : 1f;
+                return;
             }
+
+            Icon.sprite = CurrentItem.ItemIcon;
+            BulletLabel.SetActive(false);
+
+            if (CurrentItem is MeleeWeapon meleeWeapon)
+            {
+                ItemHealth.fillAmount = meleeWeapon.MeleeWeaponHealth / 100f;
+                return;
+            }
+
+            ItemHealth.fillAmount = CurrentItem.MaxItemQuantity > 0
+                ? (float)CurrentItem.ItemQuantity / CurrentItem.MaxItemQuantity
+                : 1f;
         }
     }
 

@@ -3,8 +3,13 @@
 Top-down extraction shooter prototype made with Unity.
 
 ## Latest Release
-- v0.4.0 Combat Systems and Feedback Upgrade
-- https://github.com/Hanming1008/NoSafeExit/releases/tag/v0.4.0
+- v0.4.1 UI Polish and Weapon Naming Update
+- https://github.com/Hanming1008/NoSafeExit/releases/tag/v0.4.1
+
+## v0.4.1 Update Highlights
+- Added and refined parts of the in-game GUI
+- Improved HUD readability and layout consistency
+- Renamed one weapon to `HK416` and synchronized pickup/UI display name
 
 ## v0.4.0 Update Highlights
 - Added an ammo capacity system

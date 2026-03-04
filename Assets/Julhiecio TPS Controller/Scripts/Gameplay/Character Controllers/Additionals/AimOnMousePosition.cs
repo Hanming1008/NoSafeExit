@@ -12,6 +12,7 @@ namespace JUTPS.ActionScripts
         public bool Enabled = true;
         public float NormalOffset = 0.1f;
         public bool PreventResetingAimPosition;
+        [Range(1f, 60f)] public float AimLerpSpeed = 28f;
         [Header("Two Dimensional Settings")]
         public bool TwoDimensional;
 
@@ -48,7 +49,7 @@ namespace JUTPS.ActionScripts
                 //Modify mouse position
                 MousePosition.z = Mathf.Lerp(TPSCharacter.transform.position.z - 3f, pivotPosition.z, HorizontalDistance);
                 //Set Aim Position
-                AimPosition = Vector3.Lerp(AimPosition, MousePosition, 10 * Time.deltaTime);
+                AimPosition = Vector3.Lerp(AimPosition, MousePosition, AimLerpSpeed * Time.deltaTime);
 
                 //Draw Line Current Position
                 Debug.DrawLine(pivotPosition, AimPosition, Color.red);
@@ -56,18 +57,46 @@ namespace JUTPS.ActionScripts
             else
             {
                 var crosshairRayLayer = !TPSCharacter.MyPivotCamera ? default : TPSCharacter.MyPivotCamera.CrosshairRaycastLayerMask;
-                Physics.Raycast(cam.ScreenPointToRay(mousePosition), out var hit, float.MaxValue, crosshairRayLayer);
+                var ray = cam.ScreenPointToRay(mousePosition);
+                RaycastHit hit = default;
+                bool hasValidHit = false;
+                var hits = Physics.RaycastAll(ray, float.MaxValue, crosshairRayLayer, QueryTriggerInteraction.Ignore);
+
+                if (hits != null && hits.Length > 0)
+                {
+                    System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+                    for (int i = 0; i < hits.Length; i++)
+                    {
+                        var current = hits[i];
+                        if (current.collider == null)
+                            continue;
+
+                        // Ignore self hits so close-range aiming does not stick to the player body.
+                        if (TPSCharacter != null && current.collider.transform.IsChildOf(TPSCharacter.transform))
+                            continue;
+
+                        hit = current;
+                        hasValidHit = true;
+                        break;
+                    }
+                }
 
                 if (PreventResetingAimPosition)
                 {
-                    if (hit.point != Vector3.zero)
-                        AimPosition = Vector3.Lerp(AimPosition, hit.point + hit.normal * NormalOffset, 10 * Time.deltaTime);
+                    if (hasValidHit && hit.point != Vector3.zero)
+                        AimPosition = Vector3.Lerp(AimPosition, hit.point + hit.normal * NormalOffset, AimLerpSpeed * Time.deltaTime);
                 }
                 else
                 {
-                    AimPosition = Vector3.Lerp(AimPosition, hit.point + hit.normal * NormalOffset, 10 * Time.deltaTime);
-                    if (hit.point == Vector3.zero)
+                    if (hasValidHit)
+                    {
+                        AimPosition = Vector3.Lerp(AimPosition, hit.point + hit.normal * NormalOffset, AimLerpSpeed * Time.deltaTime);
+                    }
+                    else
+                    {
                         AimPosition = Vector3.zero;
+                    }
                 }
             }
             TPSCharacter.LookAtPosition = AimPosition;

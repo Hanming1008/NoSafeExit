@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class CrosshairCursor : MonoBehaviour
 {
+    public static CrosshairCursor Instance { get; private set; }
+
     [Header("Cursor")]
     public Texture2D crosshairTexture;
     public Vector2 hotspot = new Vector2(-1f, -1f); // (-1, -1) means texture center.
@@ -15,10 +17,23 @@ public class CrosshairCursor : MonoBehaviour
     [Range(1, 8)] public int lineThickness = 2;
     public Color fallbackColor = new Color(1f, 1f, 1f, 0.95f);
 
+    [Header("Hit Feedback")]
+    public bool enableHitFeedback = true;
+    [Range(0.02f, 0.4f)] public float hitFeedbackDuration = 0.1f;
+    public Color normalHitColor = new Color(1f, 0.92f, 0.2f, 1f);
+    public Color criticalHitColor = new Color(1f, 0.2f, 0.2f, 1f);
+    [Range(3, 16)] public int hitMarkerLength = 8;
+    [Range(1, 8)] public int hitMarkerThickness = 2;
+    [Range(0, 8)] public int hitMarkerGap = 2;
+
     private Texture2D generatedTexture;
+    private Texture2D normalHitTexture;
+    private Texture2D criticalHitTexture;
+    private float hitFeedbackTimer;
 
     private void OnEnable()
     {
+        Instance = this;
         ApplyCursor();
     }
 
@@ -29,6 +44,9 @@ public class CrosshairCursor : MonoBehaviour
 
     private void OnDisable()
     {
+        if (Instance == this)
+            Instance = null;
+
         Cursor.SetCursor(null, Vector2.zero, cursorMode);
     }
 
@@ -36,6 +54,10 @@ public class CrosshairCursor : MonoBehaviour
     {
         if (generatedTexture != null)
             Destroy(generatedTexture);
+        if (normalHitTexture != null)
+            Destroy(normalHitTexture);
+        if (criticalHitTexture != null)
+            Destroy(criticalHitTexture);
     }
 
 #if UNITY_EDITOR
@@ -45,6 +67,19 @@ public class CrosshairCursor : MonoBehaviour
             ApplyCursor();
     }
 #endif
+
+    private void Update()
+    {
+        if (hitFeedbackTimer <= 0f)
+            return;
+
+        hitFeedbackTimer -= Time.deltaTime;
+        if (hitFeedbackTimer <= 0f)
+        {
+            hitFeedbackTimer = 0f;
+            ApplyCursor();
+        }
+    }
 
     [ContextMenu("Apply Cursor")]
     public void ApplyCursor()
@@ -64,6 +99,40 @@ public class CrosshairCursor : MonoBehaviour
             Cursor.visible = true;
 
         Cursor.SetCursor(textureToUse, ResolveHotspot(textureToUse), cursorMode);
+    }
+
+    public void TriggerHitFeedback(bool criticalHit)
+    {
+        if (!enableHitFeedback)
+            return;
+
+        EnsureHitFeedbackTextures();
+
+        Texture2D hitTexture = criticalHit ? criticalHitTexture : normalHitTexture;
+        if (hitTexture == null)
+            return;
+
+        if (unlockCursor)
+            Cursor.lockState = CursorLockMode.None;
+
+        if (forceVisible)
+            Cursor.visible = true;
+
+        Cursor.SetCursor(hitTexture, ResolveHotspot(hitTexture), cursorMode);
+        hitFeedbackTimer = hitFeedbackDuration;
+    }
+
+    public static void ShowHitFeedback(bool criticalHit)
+    {
+        if (Instance == null)
+        {
+            Instance = FindObjectOfType<CrosshairCursor>();
+        }
+
+        if (Instance != null)
+        {
+            Instance.TriggerHitFeedback(criticalHit);
+        }
     }
 
     private Vector2 ResolveHotspot(Texture2D tex)
@@ -146,5 +215,73 @@ public class CrosshairCursor : MonoBehaviour
         tex.SetPixels(pixels);
         tex.Apply(false, false);
         return tex;
+    }
+
+    private void EnsureHitFeedbackTextures()
+    {
+        int size = Mathf.Clamp(fallbackSize, 8, 128);
+
+        if (normalHitTexture == null || normalHitTexture.width != size || normalHitTexture.height != size)
+        {
+            if (normalHitTexture != null)
+                Destroy(normalHitTexture);
+
+            normalHitTexture = BuildHitMarkerTexture(size, normalHitColor, "HitMarker_Normal");
+        }
+
+        if (criticalHitTexture == null || criticalHitTexture.width != size || criticalHitTexture.height != size)
+        {
+            if (criticalHitTexture != null)
+                Destroy(criticalHitTexture);
+
+            criticalHitTexture = BuildHitMarkerTexture(size, criticalHitColor, "HitMarker_Critical");
+        }
+    }
+
+    private Texture2D BuildHitMarkerTexture(int size, Color markerColor, string textureName)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.name = textureName;
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color[] pixels = new Color[size * size];
+        for (int i = 0; i < pixels.Length; i++)
+            pixels[i] = new Color(0f, 0f, 0f, 0f);
+
+        int center = size / 2;
+        int length = Mathf.Clamp(hitMarkerLength, 3, size / 2);
+        int gap = Mathf.Clamp(hitMarkerGap, 0, size / 4);
+        int thickness = Mathf.Clamp(hitMarkerThickness, 1, 8);
+        int halfThick = thickness / 2;
+
+        for (int i = 0; i < length; i++)
+        {
+            PaintThickPixel(pixels, size, center - gap - i, center + gap + i, markerColor, halfThick);
+            PaintThickPixel(pixels, size, center + gap + i, center + gap + i, markerColor, halfThick);
+            PaintThickPixel(pixels, size, center - gap - i, center - gap - i, markerColor, halfThick);
+            PaintThickPixel(pixels, size, center + gap + i, center - gap - i, markerColor, halfThick);
+        }
+
+        tex.SetPixels(pixels);
+        tex.Apply(false, false);
+        return tex;
+    }
+
+    private static void PaintThickPixel(Color[] pixels, int size, int x, int y, Color color, int halfThick)
+    {
+        for (int oy = -halfThick; oy <= halfThick; oy++)
+        {
+            int py = y + oy;
+            if (py < 0 || py >= size) continue;
+
+            for (int ox = -halfThick; ox <= halfThick; ox++)
+            {
+                int px = x + ox;
+                if (px < 0 || px >= size) continue;
+
+                pixels[py * size + px] = color;
+            }
+        }
     }
 }

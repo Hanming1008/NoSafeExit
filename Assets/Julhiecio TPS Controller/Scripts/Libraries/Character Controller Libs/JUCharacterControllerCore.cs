@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using JUTPS.ActionScripts;
 using JUTPS.CameraSystems;
 using JUTPS.ExtendedInverseKinematics;
@@ -220,6 +220,8 @@ namespace JUTPS.CharacterBrain
         public LayerMask WhatIsWall;
         public float WallRayHeight = 1f;
         public float WallRayDistance = 0.6f;
+        public bool AllowWallSlide = true;
+        [Range(0f, 1f)] public float WallStopDotThreshold = 0.6f;
 
         [Header("Step Settings")]
         public bool EnableStepCorrection = true;
@@ -857,8 +859,9 @@ namespace JUTPS.CharacterBrain
         {
             if (SetRigidbodyVelocity)
             {
+                Vector3 moveDirection = ResolveWallSlideDirection(transform.forward);
                 var localVelocity = transform.InverseTransformDirection(rb.linearVelocity);
-                rb.linearVelocity = transform.forward * SpeedMultiplier * Speed + transform.up * localVelocity.y;
+                rb.linearVelocity = moveDirection * SpeedMultiplier * Speed + transform.up * localVelocity.y;
                 rb.linearVelocity = rb.linearVelocity;
                 //rb.velocity = transform.forward * SpeedMultiplier * Speed + transform.up * rb.velocity.y;
             }
@@ -882,8 +885,9 @@ namespace JUTPS.CharacterBrain
         {
             if (SetRigidbodyVelocity)
             {
+                Vector3 moveDirection = ResolveWallSlideDirection(DirectionMovement.forward);
                 var localVelocity = DirectionMovement.InverseTransformDirection(rb.linearVelocity);
-                rb.linearVelocity = DirectionMovement.forward * SpeedMultiplier * Speed + transform.up * localVelocity.y;
+                rb.linearVelocity = moveDirection * SpeedMultiplier * Speed + transform.up * localVelocity.y;
             }
             else
             {
@@ -899,14 +903,51 @@ namespace JUTPS.CharacterBrain
         {
             if (SetRigidbodyVelocity)
             {
+                Vector3 moveDirection = ResolveWallSlideDirection(DirectionTransform.forward);
                 var localVelocity = transform.InverseTransformDirection(rb.linearVelocity);
-                rb.linearVelocity = DirectionTransform.forward * SpeedMultiplier * Speed + transform.up * localVelocity.y;
+                rb.linearVelocity = moveDirection * SpeedMultiplier * Speed + transform.up * localVelocity.y;
                 //rb.velocity = DirectionTransform.forward * SpeedMultiplier * Speed + transform.up * rb.velocity.y;
             }
             else
             {
                 transform.Translate(DirectionTransform.forward * SpeedMultiplier * Speed * Time.deltaTime, Space.World);
             }
+        }
+
+        protected virtual Vector3 ResolveWallSlideDirection(Vector3 desiredDirection)
+        {
+            if (!AllowWallSlide)
+                return desiredDirection;
+
+            Vector3 flatDirection = desiredDirection;
+            flatDirection.y = 0f;
+            if (flatDirection.sqrMagnitude < 0.0001f)
+                return desiredDirection;
+
+            flatDirection.Normalize();
+
+            if (Physics.Raycast(transform.position + transform.up * WallRayHeight, flatDirection, out RaycastHit hit, WallRayDistance, WhatIsWall))
+            {
+                Vector3 wallNormal = hit.normal;
+                wallNormal.y = 0f;
+
+                if (wallNormal.sqrMagnitude > 0.0001f)
+                {
+                    wallNormal.Normalize();
+                    float intoWall = Vector3.Dot(flatDirection, -wallNormal);
+                    if (intoWall > 0.001f)
+                    {
+                        Vector3 projected = Vector3.ProjectOnPlane(flatDirection, wallNormal);
+                        projected.y = 0f;
+                        if (projected.sqrMagnitude > 0.0001f)
+                        {
+                            return projected.normalized;
+                        }
+                    }
+                }
+            }
+
+            return desiredDirection;
         }
         public void InAirMovementControl(bool JumpInert = true)
         {
@@ -1249,7 +1290,38 @@ namespace JUTPS.CharacterBrain
             RaycastHit HitFront;
             if (Physics.Raycast(transform.position + transform.up * WallRayHeight, DirectionTransform.forward, out HitFront, WallRayDistance, WhatIsWall))
             {
-                WallAHead = true;
+                bool shouldBlock = true;
+                if (AllowWallSlide)
+                {
+                    // Block movement only when pushing mostly into the wall normal.
+                    // If moving tangentially, keep sliding along the obstacle.
+                    Vector3 moveDirection = (CurvedMovement ? transform.forward : DirectionTransform.forward);
+                    moveDirection.y = 0f;
+
+                    Vector3 wallNormal = HitFront.normal;
+                    wallNormal.y = 0f;
+
+                    if (!IsMoving || moveDirection.sqrMagnitude < 0.0001f || wallNormal.sqrMagnitude < 0.0001f)
+                    {
+                        shouldBlock = false;
+                    }
+                    else
+                    {
+                        moveDirection.Normalize();
+                        wallNormal.Normalize();
+                        float intoWall = Vector3.Dot(moveDirection, -wallNormal);
+                        shouldBlock = intoWall >= WallStopDotThreshold;
+
+                        // Keep diagonal movement responsive while grazing wall edges.
+                        bool isDiagonalInput = Mathf.Abs(HorizontalX) > 0.05f && Mathf.Abs(VerticalY) > 0.05f;
+                        if (isDiagonalInput)
+                        {
+                            shouldBlock = false;
+                        }
+                    }
+                }
+
+                WallAHead = shouldBlock;
                 Debug.DrawLine(HitFront.point, transform.position + transform.up * WallRayHeight);
             }
             else
@@ -1399,27 +1471,32 @@ namespace JUTPS.CharacterBrain
                 anim.updateMode = AnimatorUpdateMode.Fixed;
                 RootMotionDeltaPosition = anim.deltaPosition * Time.fixedDeltaTime;
                 RootMotionDeltaPosition.y = 0;
-                ///_______________________________________________________________________________________________________________________________________________________
-                // >> NOTE:                                                                                                                                              |
-                /// When decreasing the Time.timeScale, the Animator does not return the delta position correctly, preventing the character from moving in slow motion   |
-                /// If Time Scale is different from 1, instead of rootmotion, normal motion without Root Motion base will be used so that it keeps moving in slow motion.|
-                ///_______________________________________________________________________________________________________________________________________________________|
 
+                // Keep root-motion movement responsive near obstacles by projecting motion
+                // along the wall tangent instead of pushing directly into the wall.
                 if (Time.timeScale == 1)
                 {
-                    rb.linearVelocity = RootMotionDeltaPosition * 5000 * RootMotionSpeed + Vector3.up * rb.linearVelocity.y;
-                }
-                else
-                {
-                    if (CurvedMovement)
+                    Vector3 desiredDirection = RootMotionDeltaPosition;
+                    desiredDirection.y = 0f;
+
+                    if (desiredDirection.sqrMagnitude > 0.0001f)
                     {
-                        rb.linearVelocity = transform.forward * VelocityMultiplier * Speed + Vector3.up * rb.linearVelocity.y;
+                        Vector3 slideDirection = ResolveWallSlideDirection(desiredDirection.normalized);
+                        float speedFromRootMotion = RootMotionDeltaPosition.magnitude * 5000f * RootMotionSpeed;
+                        rb.linearVelocity = slideDirection * speedFromRootMotion + Vector3.up * rb.linearVelocity.y;
                     }
                     else
                     {
-                        rb.linearVelocity = DirectionTransform.forward * VelocityMultiplier * Speed + Vector3.up * rb.linearVelocity.y;
+                        rb.linearVelocity = Vector3.up * rb.linearVelocity.y;
                     }
                 }
+                else
+                {
+                    Vector3 fallbackDirection = CurvedMovement ? transform.forward : DirectionTransform.forward;
+                    fallbackDirection = ResolveWallSlideDirection(fallbackDirection);
+                    rb.linearVelocity = fallbackDirection * VelocityMultiplier * Speed + Vector3.up * rb.linearVelocity.y;
+                }
+
                 if (RootMotionRotation)
                 {
                     transform.Rotate(0, anim.deltaRotation.y * 160, 0);

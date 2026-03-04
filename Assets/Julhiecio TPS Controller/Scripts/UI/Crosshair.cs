@@ -47,6 +47,17 @@ namespace JUTPS.UI
         public string[] NoShootableTags = new string[] { "Friend", "Unshootable" };
         public Color NormalColor = Color.white, ShootableColor = Color.red, NonShootableColor = new Color(1, 1, 1, 0.3f);
 
+        [Header("Hit Feedback")]
+        public bool EnableHitFeedback = true;
+        [Range(0.02f, 0.5f)] public float HitFeedbackDuration = 0.12f;
+        public Color HitFeedbackColor = new Color(1f, 0.92f, 0.2f, 1f);
+        public Color CriticalHitFeedbackColor = new Color(1f, 0.2f, 0.2f, 1f);
+        public bool RotateCrosshairsOnHit = true;
+        [Range(-90f, 90f)] public float HitRotationZ = 35f;
+        private Quaternion[] crosshairsStartRotations;
+        private float hitFeedbackTimer;
+        private Color currentHitFeedbackColor = Color.white;
+
         protected virtual void Start()
         {
             //Assign this instance
@@ -62,6 +73,7 @@ namespace JUTPS.UI
 
             //Save Crosshairs start positions
             CrosshairsStartPositions = GetCrosshairPositions(Crosshairs);
+            CacheCrosshairStartRotations();
 
             //Save Start Scale
             CrosshairStartScale = Crosshairs[0].transform.localScale;
@@ -74,6 +86,7 @@ namespace JUTPS.UI
         {
             //if theres no player, no crosshair update
             if (player == null) return;
+            UpdateHitFeedback();
             UpdateObjectOnCrosshairPoint();
             UpdateCrosshairColor();
             UpdateCrosshair();
@@ -127,22 +140,13 @@ namespace JUTPS.UI
         }
         protected virtual void UpdateCrosshairColor()
         {
-            if (!ChangeColor) return;
+            if (!ChangeColor && hitFeedbackTimer <= 0f) return;
 
-            Color color = GetCurrentCrosshairColor(ObjectOnCrosshairPoint);
+            Color color = (EnableHitFeedback && hitFeedbackTimer > 0f)
+                ? currentHitFeedbackColor
+                : GetCurrentCrosshairColor(ObjectOnCrosshairPoint);
 
-            if (Crosshairs.Length > 1)
-            {
-                foreach (Image img in Crosshairs)
-                {
-                    img.color = color;
-                }
-            }
-            else
-            {
-                Crosshairs[0].color = color;
-            }
-            CrosshairCenterPoint.color = color;
+            ApplyCrosshairColor(color);
         }
 
         protected virtual void UpdateObjectOnCrosshairPoint()
@@ -286,6 +290,105 @@ namespace JUTPS.UI
             }
             var precision = Mathf.Lerp(Current, Instance.CrosshairSensibility * 100 * (WeaponInUse ? WeaponInUse.ShotErrorProbability : 0), Speed * Time.deltaTime);
             return precision;
+        }
+
+        private void UpdateHitFeedback()
+        {
+            if (hitFeedbackTimer <= 0f) return;
+
+            hitFeedbackTimer -= Time.deltaTime;
+            if (hitFeedbackTimer <= 0f)
+            {
+                hitFeedbackTimer = 0f;
+                RestoreCrosshairRotationAfterHit();
+            }
+        }
+
+        private void ApplyCrosshairColor(Color color)
+        {
+            if (Crosshairs.Length > 1)
+            {
+                foreach (Image img in Crosshairs)
+                {
+                    if (img != null) img.color = color;
+                }
+            }
+            else if (Crosshairs.Length == 1 && Crosshairs[0] != null)
+            {
+                Crosshairs[0].color = color;
+            }
+
+            if (CrosshairCenterPoint != null)
+            {
+                CrosshairCenterPoint.color = color;
+            }
+        }
+
+        private void CacheCrosshairStartRotations()
+        {
+            if (Crosshairs == null || Crosshairs.Length == 0) return;
+
+            crosshairsStartRotations = new Quaternion[Crosshairs.Length];
+            for (int i = 0; i < Crosshairs.Length; i++)
+            {
+                if (Crosshairs[i] != null)
+                {
+                    crosshairsStartRotations[i] = Crosshairs[i].transform.localRotation;
+                }
+            }
+        }
+
+        private void ApplyHitRotation()
+        {
+            if (!RotateCrosshairsOnHit || Crosshairs == null || Crosshairs.Length <= 1) return;
+            if (crosshairsStartRotations == null || crosshairsStartRotations.Length != Crosshairs.Length)
+            {
+                CacheCrosshairStartRotations();
+            }
+
+            for (int i = 0; i < Crosshairs.Length; i++)
+            {
+                if (Crosshairs[i] == null) continue;
+                Vector3 euler = crosshairsStartRotations[i].eulerAngles;
+                Crosshairs[i].transform.localRotation = Quaternion.Euler(euler.x, euler.y, euler.z + HitRotationZ);
+            }
+        }
+
+        private void RestoreCrosshairRotationAfterHit()
+        {
+            if (crosshairsStartRotations == null || Crosshairs == null) return;
+
+            for (int i = 0; i < Crosshairs.Length; i++)
+            {
+                if (Crosshairs[i] == null) continue;
+                if (i < crosshairsStartRotations.Length)
+                {
+                    Crosshairs[i].transform.localRotation = crosshairsStartRotations[i];
+                }
+            }
+        }
+
+        public void TriggerHitFeedback(bool criticalHit)
+        {
+            if (!EnableHitFeedback) return;
+
+            currentHitFeedbackColor = criticalHit ? CriticalHitFeedbackColor : HitFeedbackColor;
+            hitFeedbackTimer = HitFeedbackDuration;
+            ApplyHitRotation();
+            ApplyCrosshairColor(currentHitFeedbackColor);
+        }
+
+        public static void ShowHitFeedback(bool criticalHit)
+        {
+            if (Instance == null)
+            {
+                Instance = FindObjectOfType<Crosshair>();
+            }
+
+            if (Instance != null)
+            {
+                Instance.TriggerHitFeedback(criticalHit);
+            }
         }
 
     }

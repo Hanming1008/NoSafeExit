@@ -48,6 +48,7 @@ namespace JUTPS
         [JUHeader("Settings")]
         public float Health = 100;
         public float MaxHealth = 100;
+        public bool Invincible = false;
 
         [JUHeader("Effects")]
         public bool BloodScreenEffect = false;
@@ -77,6 +78,9 @@ namespace JUTPS
 
         public void DoDamage(DamageInfo damageInfo)
         {
+            if (Invincible || IsDead)
+                return;
+
             Health -= damageInfo.Damage;
             LimitHealth();
             Invoke(nameof(CheckHealthState), 0.016f);

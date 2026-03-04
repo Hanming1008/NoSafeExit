@@ -1,4 +1,4 @@
-using JUTPS.ArmorSystem;
+﻿using JUTPS.ArmorSystem;
 using JUTPS.FX;
 using UnityEngine;
 
@@ -219,7 +219,7 @@ void OnCollisionEnter(Collision col)
 
             //Hit Marker
             GameObject owner = GetOwner();
-            if (owner != null && owner.CompareTag("Player"))
+            if (owner != null && (owner.CompareTag("Player") || col.gameObject.CompareTag("Player") || (col.gameObject.GetComponentInParent<JUHealth>() != null && col.gameObject.GetComponentInParent<JUHealth>().CompareTag("Player"))))
             {
                 if (col.gameObject.layer == 15 || col.gameObject.layer == 9)
                 {
@@ -346,3 +346,4 @@ private bool TryApplyIDamageableFallback(Collision col, float damage)
 }
 
 }
+

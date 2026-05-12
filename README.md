@@ -3,8 +3,17 @@
 Top-down extraction shooter prototype made with Unity.
 
 ## Latest Release
-- v0.4.1 UI Polish and Weapon Naming Update
-- https://github.com/Hanming1008/NoSafeExit/releases/tag/v0.4.1
+- v0.5.0 Grid Inventory and Loot Container Update
+- https://github.com/Hanming1008/NoSafeExit/releases/tag/v0.5.0
+
+## v0.5.0 Update Highlights
+- Added a grid-based inventory with `Rig`, `Backpack`, and `Pocket` containers
+- Added draggable item transfer between equipment slots, player containers, and loot containers
+- Added searchable world containers with right-side loot panel support
+- Added container memory so rigs and backpacks preserve their contents when dropped, picked up, opened, and re-equipped
+- Added live player equipment visuals and inventory preview updates for helmet, armor, and backpack
+- Added new item presentation assets for weapons, armor, containers, consumables, and ammo
+- Improved inventory HUD layout, slot placeholders, status bars, and drag/drop feedback
 
 ## v0.4.1 Update Highlights
 - Added and refined parts of the in-game GUI

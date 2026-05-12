@@ -65,6 +65,26 @@ public class PlayerStats : MonoBehaviour, IDamageable
         currentStamina = Mathf.Min(maxStamina, currentStamina + staminaRegenPerSecond * deltaTime);
     }
 
+    public float Heal(float amount)
+    {
+        if (isDead || amount <= 0f)
+            return 0f;
+
+        float previousHealth = currentHealth;
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        return currentHealth - previousHealth;
+    }
+
+    public float RestoreStamina(float amount)
+    {
+        if (isDead || amount <= 0f)
+            return 0f;
+
+        float previousStamina = currentStamina;
+        currentStamina = Mathf.Min(maxStamina, currentStamina + amount);
+        return currentStamina - previousStamina;
+    }
+
     public void TakeDamage(float amount, GameObject source)
     {
         if (isDead || amount <= 0f) return;

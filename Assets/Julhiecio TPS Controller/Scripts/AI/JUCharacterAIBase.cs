@@ -245,9 +245,11 @@ namespace JU.CharacterSystem.AI
             if (!Control.IsAttackPose && !isMoving && Control.LookToDirection.magnitude > 0)
                 Character.DoLookAt(transform.position + (Control.LookToDirection * 10));
 
+            bool canShoot = attacking && attackPose && Character.RightHandWeapon && Character.RightHandWeightIK > 0.85f;
+
             Character.FiringModeIK = attackPose && Character.RightHandWeapon;
             Character.FiringMode = attackPose && Character.RightHandWeapon;
-            Character.DefaultUseOfAllItems(attacking, attacking, attacking, true, false, attacking, attacking && !Character.RightHandWeapon);
+            Character.DefaultUseOfAllItems(canShoot, canShoot, canShoot, false, false, canShoot, attacking && !Character.RightHandWeapon);
 
             if (!MoveEnabled)
                 moveDirection = Vector3.zero;

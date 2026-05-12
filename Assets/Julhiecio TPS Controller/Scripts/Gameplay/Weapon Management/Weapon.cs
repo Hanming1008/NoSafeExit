@@ -37,6 +37,8 @@ namespace JUTPS.WeaponSystem
 
         //Shooting 
         public GameObject BulletPrefab;
+        [Min(0.01f)]
+        public float BulletBaseDamage = 20f;
         public GameObject MuzzleFlashParticlePrefab;
         public Transform Shoot_Position;
 
@@ -258,8 +260,10 @@ private void BulletSpawn(GameObject BulletPrefab, Vector3 ShootStart, Vector3 Sh
             }
 
             var bullet = (GameObject)Instantiate(BulletPrefab, ShootStart, ShootDirection);
+
             if (bullet.TryGetComponent(out Bullet _bullet))
             {
+                _bullet.BulletDamage = BulletBaseDamage;
                 _bullet.FinalPoint = ShootEnd != Vector3.zero ? ShootEnd : Vector3.zero;
                 _bullet.FinalPointNormal = FinalPointNormal;
 
@@ -290,6 +294,24 @@ private void BulletSpawn(GameObject BulletPrefab, Vector3 ShootStart, Vector3 Sh
         }
         public void Shot()
         {
+            if (Owner == null || TPSOwner == null || Shoot_Position == null)
+            {
+                return;
+            }
+
+            if (TPSOwner != null && !TPSOwner.IsPlayer)
+            {
+                bool isCurrentEquippedWeapon = TPSOwner.HoldableItemInUseRightHand == this &&
+                                              TPSOwner.RightHandWeapon == this &&
+                                              TPSOwner.IsItemEquiped;
+                bool poseReadyToShoot = TPSOwner.FiringMode && TPSOwner.RightHandWeightIK > 0.85f;
+
+                if (!isCurrentEquippedWeapon || !poseReadyToShoot)
+                {
+                    return;
+                }
+            }
+
             if (CanUseItem == false)
             {
                 Debug.Log("Tried to shot but the CanUseItem variable is false, if using Prevent Gun Clipping ignore this message.");
@@ -403,6 +425,7 @@ private void BulletSpawn(GameObject BulletPrefab, Vector3 ShootStart, Vector3 Sh
                         var bullet = (GameObject)Instantiate(BulletPrefab, Shoot_Position.position, Shoot_Position.rotation);
                         if (bullet.TryGetComponent(out Bullet _bullet))
                         {
+                            _bullet.BulletDamage = BulletBaseDamage;
                             _bullet.SetOwner(TPSControllerUser.gameObject);
                             _bullet.FinalPoint = CrosshairHit.point;
                             _bullet.FinalPointNormal = CrosshairHit.normal;
@@ -424,6 +447,7 @@ private void BulletSpawn(GameObject BulletPrefab, Vector3 ShootStart, Vector3 Sh
                         var bullet = (GameObject)Instantiate(BulletPrefab, Shoot_Position.position, BulletRotationPrecisionShootgun);
                         if (bullet.TryGetComponent(out Bullet _bullet))
                         {
+                            _bullet.BulletDamage = BulletBaseDamage;
                             _bullet.SetOwner(TPSControllerUser.gameObject);
                             _bullet.Ignore(ListToIgnoreBulletCollision);
                         }
@@ -531,16 +555,11 @@ public void EmitBulletShell()
             //Reload
             if (BulletsAmounts < BulletsPerMagazine)
             {
-                if (TotalBullets >= BulletsPerMagazine)
-                {
-                    BulletsAmounts = BulletsPerMagazine;
-                    TotalBullets -= BulletsPerMagazine;
-                }
-                else
-                {
-                    BulletsAmounts = TotalBullets;
-                    TotalBullets = 0;
-                }
+                int bulletsNeeded = Mathf.Max(0, BulletsPerMagazine - BulletsAmounts);
+                int bulletsToLoad = Mathf.Min(bulletsNeeded, Mathf.Max(0, TotalBullets));
+
+                BulletsAmounts += bulletsToLoad;
+                TotalBullets -= bulletsToLoad;
             }
             //Play reloading audio
             mAudioSource.PlayOneShot(ReloadAudio);

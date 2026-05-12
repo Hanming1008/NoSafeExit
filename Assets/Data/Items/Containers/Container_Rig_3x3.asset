@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7aebb63f40540614ea88b4d8d0ce36aa, type: 3}
+  m_Name: Container_Rig_3x3
+  m_EditorClassIdentifier: Assembly-CSharp::ContainerItemDefinition
+  itemId: container_rig_3x3
+  displayName: Rig 3x3
+  description: Prototype rig container with a 3x3 grid.
+  icon: {fileID: 21300000, guid: 4af80cdda6c77a04ba2b88e5d85871c0, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: 4af80cdda6c77a04ba2b88e5d85871c0, type: 3}
+  worldPrefab: {fileID: 0}
+  weight: 1.5
+  canStack: 0
+  maxStackSize: 1
+  inventoryRows: 3
+  inventoryColumns: 3
+  canRotateInGrid: 0
+  containerKind: 1
+  gridRows: 3
+  gridColumns: 3
+  equippedVisualPrefab: {fileID: 0}
+  equippedVisualObjectNames:
+  - SM_Chr_Attach_Padding_01
+  - SM_Chr_Attach_Nameplate_08
+  - SM_Chr_Attach_Pouch_Mag_Single_Handle_01
+  - SM_Chr_Attach_Pouch_Mag_Single_Handle_01 (1)
+  - SM_Chr_Attach_Pouch_Mag_Pistol_01
+  - SM_Chr_Attach_Pouch_Mag_Pistol_01 (1)
+  - SM_Chr_Attach_Pouch_Mag_Double_01
+  - SM_Chr_Attach_Pouch_Mag_Double_01 (1)
+  - SM_Chr_Attach_Grenade_Flash_01
+  hiddenVisualObjectNames: []

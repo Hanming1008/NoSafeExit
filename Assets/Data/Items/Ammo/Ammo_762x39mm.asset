@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb65e8ebfdc5bd47b0ce26ed3edb9df, type: 3}
+  m_Name: Ammo_762x39mm
+  m_EditorClassIdentifier: Assembly-CSharp::AmmoItemDefinition
+  itemId: ammo_762x39mm
+  displayName: 7.62*39 mm
+  description: Standard 7.62 rifle ammunition.
+  icon: {fileID: 0}
+  worldPrefab: {fileID: 0}
+  weight: 0.01
+  canStack: 1
+  maxStackSize: 60
+  inventoryRows: 1
+  inventoryColumns: 1
+  canRotateInGrid: 0
+  ammoCategory: 7.62*39 mm

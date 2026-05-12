@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7aebb63f40540614ea88b4d8d0ce36aa, type: 3}
+  m_Name: Container_Backpack_4x4
+  m_EditorClassIdentifier: Assembly-CSharp::ContainerItemDefinition
+  itemId: container_backpack_4x4
+  displayName: Basic Backpack
+  description: Compact field backpack with a 4x4 internal grid.
+  icon: {fileID: 21300000, guid: fca83f07cf53e0844a9b7f61792d091b, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: fca83f07cf53e0844a9b7f61792d091b,
+    type: 3}
+  worldPrefab: {fileID: 0}
+  weight: 2.5
+  canStack: 0
+  maxStackSize: 1
+  inventoryRows: 4
+  inventoryColumns: 4
+  canRotateInGrid: 0
+  containerKind: 2
+  gridRows: 4
+  gridColumns: 4
+  equippedVisualPrefab: {fileID: 0}
+  equippedVisualObjectNames:
+  - SM_Chr_Attach_Backpack_01
+  hiddenVisualObjectNames: []

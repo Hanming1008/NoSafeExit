@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8d3428bdd019684c8fb712b605e6ac7, type: 3}
+  m_Name: Grip_Glock
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponGripProfile
+  itemWieldPositionID: 0
+  holdPose: 0
+  weaponLocalPosition: {x: 0.165, y: 0.027, z: -0.04}
+  weaponLocalEulerAngles: {x: 347.88754, y: 98.85006, z: 275.54523}
+  weaponLocalScale: {x: 1, y: 1, z: 1}
+  useOppositeHandIK: 1
+  createOppositeHandIKIfMissing: 1
+  oppositeHandAnchorName: LeftHandIK
+  oppositeHandLocalPosition: {x: -0.02, y: -0.05, z: -0.045}
+  oppositeHandLocalEulerAngles: {x: 20, y: 180, z: 98}
+  leftElbowAdjustWeight: 1
+  overrideLeftElbowHint: 1
+  leftElbowHintOffset: {x: -3.4, y: -4.1, z: 0.25}
+  createShootPointIfMissing: 1
+  shootPointName: Shooting Position
+  shootPointLocalPosition: {x: 0, y: 0.04813224, z: 0.093912125}
+  shootPointLocalEulerAngles: {x: 0, y: 0, z: 0}
+  resolveGunSliderReference: 1
+  clearGunSliderWhenMissing: 0
+  gunSliderNameContains: Slide

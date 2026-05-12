@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb65e8ebfdc5bd47b0ce26ed3edb9df, type: 3}
+  m_Name: Debug_Ammo_556
+  m_EditorClassIdentifier: Assembly-CSharp::AmmoItemDefinition
+  itemId: debug_ammo_556
+  displayName: Debug 5.56 Ammo
+  description: Temporary ammo asset for inventory validation.
+  icon: {fileID: 21300000, guid: 19daaccc538d5f24e948a613992f7de7, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: aa3cc626d122bf646abe9a2b509e75ac,
+    type: 3}
+  worldPrefab: {fileID: 1495748077833478, guid: d7ceda7b4977dfd49b6b551566265733,
+    type: 3}
+  weight: 0.02
+  canStack: 1
+  maxStackSize: 60
+  inventoryRows: 1
+  inventoryColumns: 1
+  canRotateInGrid: 0
+  ammoCategory: 5.56x45mm

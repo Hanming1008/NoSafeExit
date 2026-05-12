@@ -2078,14 +2078,14 @@ namespace JUTPS.CharacterBrain
         {
             if (RightHandWeapon != null)
             {
-                if (RightHandWeapon.BulletCasingPrefab != null)
+                if (RightHandWeapon.BulletCasingPrefab != null && RightHandWeapon.IsUsingItem)
                 {
                     RightHandWeapon.EmitBulletShell();
                 }
             }
             if (LeftHandWeapon != null)
             {
-                if (LeftHandWeapon.BulletCasingPrefab != null)
+                if (LeftHandWeapon.BulletCasingPrefab != null && LeftHandWeapon.IsUsingItem)
                 {
                     LeftHandWeapon.EmitBulletShell();
                 }

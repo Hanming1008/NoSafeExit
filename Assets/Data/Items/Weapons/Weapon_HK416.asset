@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57dc59a5caf98d14196877114354b638, type: 3}
+  m_Name: Weapon_HK416
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponItemDefinition
+  itemId: weapon_hk416
+  displayName: HK416
+  description: 5.56 rifle configured as the current player primary weapon baseline.
+  icon: {fileID: 21300000, guid: e9c3d9a477385f34dbc312805f432e90, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: 49f829b73fab95a4cbb296e9e94f9731,
+    type: 3}
+  worldPrefab: {fileID: 0}
+  weight: 4.2
+  canStack: 0
+  maxStackSize: 1
+  inventoryRows: 2
+  inventoryColumns: 5
+  canRotateInGrid: 0
+  weaponCategory: 0
+  fireMode: 1
+  equippedPrefab: {fileID: 100100000, guid: a1f7d22f9f0fa1543bbbadeb0942f75d, type: 3}
+  compatibleAmmo: {fileID: 11400000, guid: c7fad545ea68b8c4eb39d4191344cf1a, type: 2}
+  usesAmmo: 1
+  magazineSize: 30
+  roundsPerMinute: 800
+  baseDamage: 25
+  recoil: 20
+  shotsPerSecond: 13.333333
+  shotAudio: {fileID: 8300000, guid: cf8eb31222c638b408942941d5e0bbf0, type: 3}
+  reloadAudio: {fileID: 8300000, guid: 17534bbf483d6194e802ccd8f011b494, type: 3}
+  gripProfile: {fileID: 11400000, guid: 38acc567468d2da43a4bb37e0ce07228, type: 2}
+  equipmentSlotIcon: {fileID: 21300000, guid: 47f81f4def4d59444b04bd44febbbe8a, type: 3}
+  pluginItemName: HK416

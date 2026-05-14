@@ -3,8 +3,17 @@
 Top-down extraction shooter prototype made with Unity.
 
 ## Latest Release
-- v0.5.0 Grid Inventory and Loot Container Update
-- https://github.com/Hanming1008/NoSafeExit/releases/tag/v0.5.0
+- v0.6.0 Loot, Shelter, Trader, and Enemy Systems Update
+- https://github.com/Hanming1008/NoSafeExit/releases/tag/v0.6.0
+
+## v0.6.0 Update Highlights
+- Expanded the item pool with new weapons, armor tiers, backpacks, ammo, medical items, consumables, currency, and valuable loot
+- Added item rarity/value presentation, improved item icons, and an interactive item inspect panel
+- Added stack splitting, stack merging, item rotation while dragging, and more reliable grid placement behavior
+- Connected ammo reserves, reload consumption, medical use, food, water, hunger, hydration, and carry weight updates
+- Added searchable loot crates with randomized loot tables and improved world interaction prompts/highlighting
+- Added shelter extraction flow, stash access, indoor camera handling, trader UI, buy/sell flow, and shelter recovery stations
+- Added enemy weapon loadout support and the first pass of enemy corpse loot UI and plugin death-behavior suppression
 
 ## v0.5.0 Update Highlights
 - Added a grid-based inventory with `Rig`, `Backpack`, and `Pocket` containers
@@ -46,4 +55,4 @@ Top-down extraction shooter prototype made with Unity.
 
 ## Project Status
 - Playable prototype under active development
-- Current focus: inventory/loot UX and extraction loop expansion
+- Current focus: enemy loot flow, enemy spawning, and extraction/shelter progression

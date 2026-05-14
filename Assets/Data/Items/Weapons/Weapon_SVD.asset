@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57dc59a5caf98d14196877114354b638, type: 3}
+  m_Name: Weapon_SVD
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponItemDefinition
+  itemId: weapon_svd
+  displayName: SVD
+  description: Semi-automatic 7.62 designated marksman rifle.
+  icon: {fileID: 21300000, guid: 69146a2c5aea9e246a261a836ab6af84, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: 557e0da0157bac7499aa00eb2091e245,
+    type: 3}
+  worldPrefab: {fileID: 1775407650306278, guid: c2d5b7c473997b9428dcd75e2d9a1619,
+    type: 3}
+  valueTier: 0
+  moneyValue: 3000
+  weight: 5
+  canStack: 0
+  maxStackSize: 1
+  inventoryRows: 2
+  inventoryColumns: 6
+  canRotateInGrid: 0
+  weaponCategory: 4
+  fireMode: 0
+  equippedPrefab: {fileID: 1775407650306278, guid: c2d5b7c473997b9428dcd75e2d9a1619,
+    type: 3}
+  compatibleAmmo: {fileID: 11400000, guid: 75a0a931484f17146bf1dc5079506f74, type: 2}
+  usesAmmo: 1
+  magazineSize: 15
+  roundsPerMinute: 500
+  baseDamage: 50
+  recoil: 32
+  shotsPerSecond: 8.333333
+  shotAudio: {fileID: 8300000, guid: cf8eb31222c638b408942941d5e0bbf0, type: 3}
+  reloadAudio: {fileID: 8300000, guid: 17534bbf483d6194e802ccd8f011b494, type: 3}
+  gripProfile: {fileID: 11400000, guid: 6ae59f5818e757a40adc4d10e2b73330, type: 2}
+  equipmentSlotIcon: {fileID: 21300000, guid: 9b0f082c48f6cda4684b473f8e756490, type: 3}
+  pluginItemName: AK47

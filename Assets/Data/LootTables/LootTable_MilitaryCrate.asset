@@ -1,0 +1,198 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54b6604e25b3b0b48b8f94a4695ba067, type: 3}
+  m_Name: LootTable_MilitaryCrate
+  m_EditorClassIdentifier: Assembly-CSharp::LootTable
+  minRolls: 2
+  maxRolls: 6
+  placementAttemptsPerRoll: 20
+  entries:
+  - item: {fileID: 11400000, guid: c7fad545ea68b8c4eb39d4191344cf1a, type: 2}
+    weight: 8
+    minQuantity: 15
+    maxQuantity: 60
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 75a0a931484f17146bf1dc5079506f74, type: 2}
+    weight: 7
+    minQuantity: 15
+    maxQuantity: 60
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 0fb479bd42983bf42bf5c2d881fb7755, type: 2}
+    weight: 10
+    minQuantity: 15
+    maxQuantity: 60
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: ace79e30abdc2aa49b9689e5667a60b9, type: 2}
+    weight: 3
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 2e4793ccd258a734da54534045d5ccaa, type: 2}
+    weight: 8
+    minQuantity: 1
+    maxQuantity: 3
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: b370f30b8fff63c47933b41f352d1291, type: 2}
+    weight: 8
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 4d177e7947f1b7346b1e57c722a6c9c5, type: 2}
+    weight: 8
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 17a23d90e9e74659809c5997b39a8cd0, type: 2}
+    weight: 10
+    minQuantity: 100
+    maxQuantity: 1200
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: e2aa7fd9707e4c2994fc57da29a3e6a8, type: 2}
+    weight: 6
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: ea2f76307d8748748397f736faf51b1e, type: 2}
+    weight: 6
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: aa0ec3a2fbb140ad998ce9ee0c287018, type: 2}
+    weight: 4
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: f102648cf01441bbbeaed8b17acc75d1, type: 2}
+    weight: 7
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: daaf13a4b7434ebcac28055ad7a4a48a, type: 2}
+    weight: 7
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 28eed785b9234be894def413453c31e9, type: 2}
+    weight: 5
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 0e917c708845435c8e619ece252b7715, type: 2}
+    weight: 5
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 91dc995a42c23cb44846d2e2da7d589c, type: 2}
+    weight: 2
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: e26425901e0046eab471409e5eb40f80, type: 2}
+    weight: 1.5
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 8f7e0d9a6d2f4f5a8d01f7dcb4e7c5a1, type: 2}
+    weight: 1
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 79cf59b4b47b41fe87b2999509caae67, type: 2}
+    weight: 1.2
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: a86448e9ac79fd042a1d102034245a7b, type: 2}
+    weight: 1.4
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: d71a73b027a0e21499bdbdb87c055c3f, type: 2}
+    weight: 2
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 3d73d7792b8c4bc8a6ab936c3009c68f, type: 2}
+    weight: 0.65
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 79fba115cc664ad2b69002252cca3344, type: 2}
+    weight: 0.45
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: d737f4c3e5364aad97c914ed1692108a, type: 2}
+    weight: 0.55
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 804736fe1edd4f8aa825a2c50e6a1af3, type: 2}
+    weight: 1
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 66d600e610fbee6499900259a5168dbc, type: 2}
+    weight: 1.2
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: fd5e2e8c16a24d1c8ec69e13790e4eea, type: 2}
+    weight: 0.35
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 274b97aac10d48ca9faeda9979666be9, type: 2}
+    weight: 0.9
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: f652153026604f7782902a07cf8467df, type: 2}
+    weight: 0.35
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 82c7c3a5f6b1aea45bfcbeaf92e02811, type: 2}
+    weight: 0.8
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 25fda88906a54556b1f1ed1fee67040d, type: 2}
+    weight: 1.1
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 0e865a44440c4206b7497741e7a3c812, type: 2}
+    weight: 0.8
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 5f5066936c1d494b89a30ed43c833107, type: 2}
+    weight: 0.25
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 35ca67acb4be4b64aae02b660ef58c84, type: 2}
+    weight: 0.35
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 0b1d6ee955b24cc0b2c08b1ab660d546, type: 2}
+    weight: 0.25
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: fd1c83ee13e84d4e93e4aad3bfb6be9c, type: 2}
+    weight: 0.35
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0

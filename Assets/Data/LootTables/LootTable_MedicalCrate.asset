@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54b6604e25b3b0b48b8f94a4695ba067, type: 3}
+  m_Name: LootTable_MedicalCrate
+  m_EditorClassIdentifier: Assembly-CSharp::LootTable
+  minRolls: 2
+  maxRolls: 4
+  placementAttemptsPerRoll: 16
+  entries:
+  - item: {fileID: 11400000, guid: ace79e30abdc2aa49b9689e5667a60b9, type: 2}
+    weight: 8
+    minQuantity: 1
+    maxQuantity: 2
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 2e4793ccd258a734da54534045d5ccaa, type: 2}
+    weight: 12
+    minQuantity: 1
+    maxQuantity: 3
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: b370f30b8fff63c47933b41f352d1291, type: 2}
+    weight: 8
+    minQuantity: 1
+    maxQuantity: 2
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 4d177e7947f1b7346b1e57c722a6c9c5, type: 2}
+    weight: 5
+    minQuantity: 1
+    maxQuantity: 2
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: daaf13a4b7434ebcac28055ad7a4a48a, type: 2}
+    weight: 5
+    minQuantity: 1
+    maxQuantity: 1
+    allowRotatedPlacement: 0
+  - item: {fileID: 11400000, guid: 17a23d90e9e74659809c5997b39a8cd0, type: 2}
+    weight: 2
+    minQuantity: 50
+    maxQuantity: 600
+    allowRotatedPlacement: 0

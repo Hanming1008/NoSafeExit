@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using JUTPS;
 using JUTPS.InventorySystem;
 using JUTPS.ItemSystem;
@@ -8,10 +9,18 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class PlayerWeaponSelection : MonoBehaviour
 {
+    private sealed class WeaponVisualOverrideState
+    {
+        public WeaponItemDefinition Definition;
+        public GameObject VisualRoot;
+        public Renderer[] OriginalRenderers = System.Array.Empty<Renderer>();
+    }
+
     [Header("References")]
     [SerializeField] private PlayerGameplayInput gameplayInput;
     [SerializeField] private PlayerEquipment equipment;
     [SerializeField] private PlayerInventory inventory;
+    [SerializeField] private PlayerGridInventory gridInventory;
     [SerializeField] private JUCharacterController juCharacter;
     [SerializeField] private JUInventory juInventory;
     [SerializeField] private Animator animator;
@@ -32,6 +41,7 @@ public class PlayerWeaponSelection : MonoBehaviour
     private int pendingReloadMagazineBefore;
     private int pendingReloadReserveBefore;
     private EquipmentSlotType lastRequestedWeaponSlot = EquipmentSlotType.PrimaryWeapon;
+    private readonly Dictionary<Transform, WeaponVisualOverrideState> weaponVisualOverrides = new Dictionary<Transform, WeaponVisualOverrideState>();
 
     void Awake()
     {
@@ -82,6 +92,7 @@ public class PlayerWeaponSelection : MonoBehaviour
         SyncPluginInventoryWithEquipment();
         SyncWeaponReserveAmmo();
         SyncReloadState();
+        SyncEquippedWeaponMagazineState();
         SyncActiveWeaponIKSettings();
         SyncVisibleWeaponModels();
 
@@ -119,6 +130,11 @@ public class PlayerWeaponSelection : MonoBehaviour
     public Weapon GetCurrentWeaponComponent()
     {
         return juInventory != null ? juInventory.HoldableItemInUseInRightHand as Weapon : null;
+    }
+
+    public int GetReserveAmmoFor(WeaponItemDefinition definition)
+    {
+        return GetReserveAmmo(definition);
     }
 
     public WeaponItemDefinition GetPreviewWeaponDefinition()
@@ -183,8 +199,15 @@ public class PlayerWeaponSelection : MonoBehaviour
 
         if (mappingChanged)
         {
-            ApplyDefinitionToWeapon(primaryDefinition, primaryWeapon as Weapon);
-            ApplyDefinitionToWeapon(secondaryDefinition, secondaryWeapon as Weapon);
+            if (lastPrimaryWeapon != null && lastPrimaryWeapon != primaryWeapon)
+                ClearWeaponVisualOverride(lastPrimaryWeapon.transform);
+            if (lastSecondaryWeapon != null && lastSecondaryWeapon != secondaryWeapon)
+                ClearWeaponVisualOverride(lastSecondaryWeapon.transform);
+
+            ApplyDefinitionToWeapon(primaryDefinition, primaryWeapon as Weapon, EquipmentSlotType.PrimaryWeapon);
+            ApplyDefinitionToWeapon(secondaryDefinition, secondaryWeapon as Weapon, EquipmentSlotType.SecondaryWeapon);
+            ApplyDefinitionVisualOverride(primaryDefinition, primaryWeapon as Weapon);
+            ApplyDefinitionVisualOverride(secondaryDefinition, secondaryWeapon as Weapon);
 
             for (int i = 0; i < juInventory.HoldableItensRightHand.Length; i++)
             {
@@ -245,6 +268,35 @@ public class PlayerWeaponSelection : MonoBehaviour
         weapon.BulletsAmounts = Mathf.Clamp(weapon.BulletsAmounts, 0, weapon.BulletsPerMagazine);
     }
 
+    private void SyncEquippedWeaponMagazineState()
+    {
+        if (juCharacter != null && juCharacter.IsReloading)
+            return;
+
+        SyncEquippedWeaponMagazineStateForSlot(EquipmentSlotType.PrimaryWeapon);
+        SyncEquippedWeaponMagazineStateForSlot(EquipmentSlotType.SecondaryWeapon);
+    }
+
+    private void SyncEquippedWeaponMagazineStateForSlot(EquipmentSlotType slotType)
+    {
+        if (equipment == null)
+            return;
+
+        WeaponItemDefinition definition = equipment.GetEquippedWeaponDefinition(slotType);
+        Weapon weapon = GetMappedWeaponFromEquipmentSlot(slotType) as Weapon;
+        if (definition == null || weapon == null)
+            return;
+
+        InventorySlot slot = equipment.GetSlot(slotType);
+        ItemRuntimeData runtimeData = slot != null ? slot.RuntimeData : null;
+        if (runtimeData == null)
+            return;
+
+        runtimeData.SetWeaponMagazineAmmo(
+            definition,
+            Mathf.Clamp(weapon.BulletsAmounts, 0, Mathf.Max(1, weapon.BulletsPerMagazine)));
+    }
+
     private void SyncReloadState()
     {
         bool isReloading = juCharacter != null && juCharacter.IsReloading;
@@ -284,14 +336,14 @@ public class PlayerWeaponSelection : MonoBehaviour
         int magazineCapacity = Mathf.Max(1, pendingReloadWeapon.BulletsPerMagazine);
         int bulletsNeeded = Mathf.Max(0, magazineCapacity - pendingReloadMagazineBefore);
         int bulletsLoaded = Mathf.Min(bulletsNeeded, pendingReloadReserveBefore);
-        int correctedMagazine = pendingReloadMagazineBefore + bulletsLoaded;
-        int correctedReserve = Mathf.Max(0, pendingReloadReserveBefore - bulletsLoaded);
+        int bulletsRemoved = bulletsLoaded > 0
+            ? RemoveReserveAmmo(pendingReloadDefinition, bulletsLoaded)
+            : 0;
+        int correctedMagazine = pendingReloadMagazineBefore + bulletsRemoved;
+        int correctedReserve = GetReserveAmmo(pendingReloadDefinition);
 
         pendingReloadWeapon.BulletsAmounts = correctedMagazine;
         pendingReloadWeapon.TotalBullets = correctedReserve;
-
-        if (inventory != null && bulletsLoaded > 0)
-            inventory.TryRemoveItem(pendingReloadDefinition.compatibleAmmo, bulletsLoaded);
 
         ClearPendingReloadState();
     }
@@ -348,6 +400,15 @@ public class PlayerWeaponSelection : MonoBehaviour
         if (weaponRoot == null)
             return;
 
+        if (weaponVisualOverrides.TryGetValue(weaponRoot, out WeaponVisualOverrideState overrideState)
+            && overrideState != null
+            && overrideState.VisualRoot != null)
+        {
+            SetRenderersVisible(overrideState.OriginalRenderers, false);
+            SetVisualRootVisible(overrideState.VisualRoot, visible);
+            return;
+        }
+
         Renderer[] renderers = weaponRoot.GetComponentsInChildren<Renderer>(true);
         for (int i = 0; i < renderers.Length; i++)
         {
@@ -370,6 +431,142 @@ public class PlayerWeaponSelection : MonoBehaviour
 
         Transform explicitModelChild = FindChildContaining(weaponRoot, "_Model");
         return explicitModelChild == null;
+    }
+
+    private void ApplyDefinitionVisualOverride(WeaponItemDefinition definition, Weapon weapon)
+    {
+        if (weapon == null)
+            return;
+
+        Transform weaponRoot = weapon.transform;
+        if (!ShouldUseDefinitionVisualOverride(definition))
+        {
+            ClearWeaponVisualOverride(weaponRoot);
+            return;
+        }
+
+        if (weaponVisualOverrides.TryGetValue(weaponRoot, out WeaponVisualOverrideState existingState)
+            && existingState != null
+            && existingState.Definition == definition
+            && existingState.VisualRoot != null)
+        {
+            SetRenderersVisible(existingState.OriginalRenderers, false);
+            return;
+        }
+
+        ClearWeaponVisualOverride(weaponRoot);
+
+        Renderer[] originalRenderers = weaponRoot.GetComponentsInChildren<Renderer>(true);
+        GameObject visualRoot = Instantiate(definition.equippedPrefab, weaponRoot);
+        visualRoot.name = definition.displayName + "_Visual";
+        visualRoot.transform.localPosition = Vector3.zero;
+        visualRoot.transform.localRotation = Quaternion.identity;
+        visualRoot.transform.localScale = Vector3.one;
+        SetLayerRecursively(visualRoot, weaponRoot.gameObject.layer);
+        StripGameplayComponents(visualRoot);
+
+        WeaponVisualOverrideState state = new WeaponVisualOverrideState
+        {
+            Definition = definition,
+            VisualRoot = visualRoot,
+            OriginalRenderers = originalRenderers
+        };
+
+        SetRenderersVisible(originalRenderers, false);
+        weaponVisualOverrides[weaponRoot] = state;
+    }
+
+    private bool ShouldUseDefinitionVisualOverride(WeaponItemDefinition definition)
+    {
+        if (definition == null || definition.equippedPrefab == null)
+            return false;
+
+        string itemId = definition.itemId;
+        return itemId != "weapon_hk416"
+            && itemId != "weapon_ak47"
+            && itemId != "weapon_glock";
+    }
+
+    private void ClearWeaponVisualOverride(Transform weaponRoot)
+    {
+        if (weaponRoot == null || !weaponVisualOverrides.TryGetValue(weaponRoot, out WeaponVisualOverrideState state))
+            return;
+
+        weaponVisualOverrides.Remove(weaponRoot);
+        if (state != null)
+        {
+            SetRenderersVisible(state.OriginalRenderers, true);
+            DestroyRuntimeObject(state.VisualRoot);
+        }
+    }
+
+    private void SetVisualRootVisible(GameObject visualRoot, bool visible)
+    {
+        if (visualRoot == null)
+            return;
+
+        Renderer[] renderers = visualRoot.GetComponentsInChildren<Renderer>(true);
+        SetRenderersVisible(renderers, visible);
+    }
+
+    private void SetRenderersVisible(Renderer[] renderers, bool visible)
+    {
+        if (renderers == null)
+            return;
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+                continue;
+
+            renderer.enabled = visible;
+            renderer.forceRenderingOff = false;
+        }
+    }
+
+    private void StripGameplayComponents(GameObject visualRoot)
+    {
+        if (visualRoot == null)
+            return;
+
+        Collider[] colliders = visualRoot.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+            DestroyRuntimeObject(colliders[i]);
+
+        Rigidbody[] rigidbodies = visualRoot.GetComponentsInChildren<Rigidbody>(true);
+        for (int i = 0; i < rigidbodies.Length; i++)
+            DestroyRuntimeObject(rigidbodies[i]);
+
+        AudioSource[] audioSources = visualRoot.GetComponentsInChildren<AudioSource>(true);
+        for (int i = 0; i < audioSources.Length; i++)
+            DestroyRuntimeObject(audioSources[i]);
+
+        MonoBehaviour[] behaviours = visualRoot.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < behaviours.Length; i++)
+            DestroyRuntimeObject(behaviours[i]);
+    }
+
+    private void SetLayerRecursively(GameObject root, int layer)
+    {
+        if (root == null)
+            return;
+
+        root.layer = layer;
+        Transform rootTransform = root.transform;
+        for (int i = 0; i < rootTransform.childCount; i++)
+            SetLayerRecursively(rootTransform.GetChild(i).gameObject, layer);
+    }
+
+    private void DestroyRuntimeObject(Object target)
+    {
+        if (target == null)
+            return;
+
+        if (Application.isPlaying)
+            Destroy(target);
+        else
+            DestroyImmediate(target);
     }
 
     private JUHoldableItem GetFirstAvailableRightHandWeapon()
@@ -430,7 +627,7 @@ public class PlayerWeaponSelection : MonoBehaviour
             || string.Equals(holdableItem.name, definition.pluginItemName, System.StringComparison.OrdinalIgnoreCase);
     }
 
-    private void ApplyDefinitionToWeapon(WeaponItemDefinition definition, Weapon weapon)
+    private void ApplyDefinitionToWeapon(WeaponItemDefinition definition, Weapon weapon, EquipmentSlotType slotType)
     {
         if (definition == null || weapon == null)
             return;
@@ -460,10 +657,20 @@ public class PlayerWeaponSelection : MonoBehaviour
             weapon.ItemIcon = definition.icon;
 
         weapon.ItemFilterTag = definition.weaponCategory == WeaponCategory.Pistol ? "Hand Gun" : "General";
-        weapon.BulletsAmounts = Mathf.Clamp(weapon.BulletsAmounts, 0, weapon.BulletsPerMagazine);
+        weapon.BulletsAmounts = GetMagazineAmmoForEquippedWeapon(definition, slotType);
         weapon.TotalBullets = UsesManagedAmmo(definition)
             ? GetReserveAmmo(definition)
             : Mathf.Max(0, weapon.TotalBullets);
+    }
+
+    private int GetMagazineAmmoForEquippedWeapon(WeaponItemDefinition definition, EquipmentSlotType slotType)
+    {
+        int magazineSize = Mathf.Max(1, definition != null ? definition.magazineSize : 1);
+        InventorySlot slot = equipment != null ? equipment.GetSlot(slotType) : null;
+        ItemRuntimeData runtimeData = slot != null ? slot.RuntimeData : null;
+        return runtimeData != null
+            ? runtimeData.EnsureWeaponMagazineAmmo(definition)
+            : magazineSize;
     }
 
     private void EnsureWeaponRuntimeReferences(Weapon weapon)
@@ -530,15 +737,42 @@ public class PlayerWeaponSelection : MonoBehaviour
 
     private int GetReserveAmmo(WeaponItemDefinition definition)
     {
-        if (!UsesManagedAmmo(definition) || inventory == null)
+        if (!UsesManagedAmmo(definition))
             return 0;
 
-        return Mathf.Max(0, inventory.GetQuantity(definition.compatibleAmmo));
+        int reserveAmmo = 0;
+        if (gridInventory != null)
+            reserveAmmo += gridInventory.GetQuantity(definition.compatibleAmmo);
+
+        if (inventory != null)
+            reserveAmmo += inventory.GetQuantity(definition.compatibleAmmo);
+
+        return Mathf.Max(0, reserveAmmo);
+    }
+
+    private int RemoveReserveAmmo(WeaponItemDefinition definition, int quantity)
+    {
+        if (!UsesManagedAmmo(definition) || quantity <= 0)
+            return 0;
+
+        int removedQuantity = 0;
+        int remainingQuantity = quantity;
+
+        if (gridInventory != null)
+        {
+            removedQuantity += gridInventory.RemoveItem(definition.compatibleAmmo, remainingQuantity);
+            remainingQuantity = quantity - removedQuantity;
+        }
+
+        if (remainingQuantity > 0 && inventory != null)
+            removedQuantity += inventory.RemoveItem(definition.compatibleAmmo, remainingQuantity);
+
+        return removedQuantity;
     }
 
     private bool NeedsReferenceResolution()
     {
-        return gameplayInput == null || equipment == null || inventory == null || juCharacter == null || juInventory == null || animator == null;
+        return gameplayInput == null || equipment == null || inventory == null || gridInventory == null || juCharacter == null || juInventory == null || animator == null;
     }
 
     private void ResolveReferences()
@@ -551,6 +785,9 @@ public class PlayerWeaponSelection : MonoBehaviour
 
         if (inventory == null)
             inventory = GetComponent<PlayerInventory>();
+
+        if (gridInventory == null)
+            gridInventory = GetComponent<PlayerGridInventory>();
 
         if (juCharacter == null)
             juCharacter = GetComponent<JUCharacterController>();

@@ -19,11 +19,16 @@ public static class ContainerIconGenerator
         GenerateBackpackIcon(
             "Assets/Synty/PolygonMilitary/Prefabs/Characters/Attachments/SM_Chr_Attach_Backpack_01.prefab",
             "Assets/Data/Items/Containers/Container_Backpack_4x4.asset",
-            OutputFolder + "/Icon_Backpack_Operator.png");
+            OutputFolder + "/Icon_Backpack_Large.png");
+
+        GenerateBackpackIcon(
+            "Assets/Synty/PolygonMilitary/Prefabs/Characters/Attachments/SM_Chr_Attach_Backpack_02.prefab",
+            "Assets/Data/Items/Containers/Container_Backpack_Basic.asset",
+            OutputFolder + "/Icon_Backpack_Basic.png");
 
         GenerateArmorVisualIcon(
             CharacterPrefabPath,
-            "Assets/Data/Items/Debug/Debug_Chest_Rig.asset",
+            "Assets/Data/Items/Armor/Armor_Body_LevelI.asset",
             OutputFolder + "/Icon_ChestRig_Operator.png",
             new[]
             {
@@ -38,10 +43,20 @@ public static class ContainerIconGenerator
                 "SM_Chr_Attach_Grenade_Flash_01"
             });
 
+        GenerateArmorPrefabIcon(
+            "Assets/Synty/PolygonMilitary/Prefabs/Characters/Attachments/SM_Chr_Attach_Helmet_07.prefab",
+            "Assets/Data/Items/Armor/Armor_Helmet_Operator.asset",
+            OutputFolder + "/Icon_Helmet_Operator.png");
+
+        GenerateArmorPrefabIcon(
+            "Assets/Synty/PolygonMilitary/Prefabs/Characters/Attachments/SM_Chr_Attach_Helmet_09.prefab",
+            "Assets/Data/Items/Armor/Armor_Helmet_LevelI.asset",
+            OutputFolder + "/Icon_Helmet_LevelI.png");
+
         GenerateArmorVisualIcon(
             CharacterPrefabPath,
-            "Assets/Data/Items/Armor/Armor_Helmet_Operator.asset",
-            OutputFolder + "/Icon_Helmet_Operator.png",
+            "Assets/Data/Items/Armor/Armor_Helmet_LevelIII.asset",
+            OutputFolder + "/Icon_Helmet_LevelIII.png",
             new[]
             {
                 "SM_Chr_Attach_Helmet_01_Goggles_01",
@@ -236,6 +251,118 @@ public static class ContainerIconGenerator
 
             keyLightGo = CreateLight("TEMP_ARMOR_KEY_" + armorAsset.name, new Vector3(32f, 140f, 0f), 0.82f, new Color(0.86f, 0.88f, 0.92f));
             fillLightGo = CreateLight("TEMP_ARMOR_FILL_" + armorAsset.name, new Vector3(330f, 300f, 0f), 0.22f, new Color(0.62f, 0.66f, 0.74f));
+
+            renderTexture = new RenderTexture(512, 512, 24, RenderTextureFormat.ARGB32)
+            {
+                antiAliasing = 4
+            };
+            renderTexture.Create();
+            camera.targetTexture = renderTexture;
+            camera.Render();
+
+            var previousActive = RenderTexture.active;
+            RenderTexture.active = renderTexture;
+            texture = new Texture2D(512, 512, TextureFormat.ARGB32, false);
+            texture.ReadPixels(new Rect(0, 0, 512, 512), 0, 0);
+            texture.Apply();
+            RenderTexture.active = previousActive;
+
+            File.WriteAllBytes(GetAbsoluteProjectPath(outputPath), texture.EncodeToPNG());
+            AssetDatabase.ImportAsset(outputPath, ImportAssetOptions.ForceUpdate);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(outputPath);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(outputPath);
+            armorAsset.icon = sprite;
+            armorAsset.gridInventorySprite = sprite;
+            EditorUtility.SetDirty(armorAsset);
+        }
+        finally
+        {
+            if (instance != null)
+                Object.DestroyImmediate(instance);
+            if (cameraGo != null)
+                Object.DestroyImmediate(cameraGo);
+            if (keyLightGo != null)
+                Object.DestroyImmediate(keyLightGo);
+            if (fillLightGo != null)
+                Object.DestroyImmediate(fillLightGo);
+            if (renderTexture != null)
+            {
+                renderTexture.Release();
+                Object.DestroyImmediate(renderTexture);
+            }
+            if (texture != null)
+                Object.DestroyImmediate(texture);
+        }
+    }
+
+    private static void GenerateArmorPrefabIcon(string prefabPath, string assetPath, string outputPath)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        var armorAsset = AssetDatabase.LoadAssetAtPath<ArmorItemDefinition>(assetPath);
+
+        if (prefab == null)
+            throw new InvalidOperationException("Missing prefab at " + prefabPath);
+
+        if (armorAsset == null)
+            throw new InvalidOperationException("Missing armor asset at " + assetPath);
+
+        GameObject instance = null;
+        GameObject cameraGo = null;
+        GameObject keyLightGo = null;
+        GameObject fillLightGo = null;
+        RenderTexture renderTexture = null;
+        Texture2D texture = null;
+
+        try
+        {
+            instance = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+            if (instance == null)
+                throw new InvalidOperationException("Could not instantiate prefab " + prefabPath);
+
+            instance.name = "TEMP_ARMOR_PREFAB_ICON_" + armorAsset.name;
+            instance.hideFlags = HideFlags.HideAndDontSave;
+            SetLayerRecursively(instance, 31);
+
+            foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            var bounds = CalculateBounds(instance);
+            var center = bounds.center + new Vector3(0f, -0.01f, 0f);
+            var extents = bounds.extents;
+
+            cameraGo = new GameObject("TEMP_ARMOR_PREFAB_CAMERA_" + armorAsset.name)
+            {
+                hideFlags = HideFlags.HideAndDontSave
+            };
+
+            var camera = cameraGo.AddComponent<Camera>();
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color(0f, 0f, 0f, 0f);
+            camera.cullingMask = 1 << 31;
+            camera.allowHDR = false;
+            camera.allowMSAA = true;
+            camera.orthographic = true;
+            camera.nearClipPlane = 0.01f;
+            camera.farClipPlane = 50f;
+            camera.aspect = 1f;
+            camera.orthographicSize = Mathf.Max(extents.y, extents.x) * 1.14f;
+            cameraGo.transform.rotation = Quaternion.Euler(8f, 220f, 0f);
+            cameraGo.transform.position = center - (cameraGo.transform.forward * 4f);
+
+            keyLightGo = CreateLight("TEMP_ARMOR_PREFAB_KEY_" + armorAsset.name, new Vector3(35f, 150f, 0f), 0.84f, new Color(0.86f, 0.88f, 0.92f));
+            fillLightGo = CreateLight("TEMP_ARMOR_PREFAB_FILL_" + armorAsset.name, new Vector3(330f, 300f, 0f), 0.20f, new Color(0.62f, 0.66f, 0.74f));
 
             renderTexture = new RenderTexture(512, 512, 24, RenderTextureFormat.ARGB32)
             {

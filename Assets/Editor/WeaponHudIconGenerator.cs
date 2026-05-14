@@ -64,6 +64,38 @@ public static class WeaponHudIconGenerator
                 new Vector3(16f, 48f, 28f),
                 new Vector3(0.07f, -0.02f, 0f),
                 0.7f),
+            new WeaponIconJob(
+                "SVD",
+                "Assets/Synty/PolygonMilitary/Prefabs/Weapons/Modular_Presets/SM_Wep_Preset_B_Sniper_01.prefab",
+                "Assets/Data/Items/Weapons/Weapon_SVD.asset",
+                OutputFolder + "/Icon_SVD.png",
+                new Vector3(16f, 48f, 28f),
+                new Vector3(0.07f, -0.02f, 0f),
+                0.7f),
+            new WeaponIconJob(
+                "Groza",
+                "Assets/Synty/PolygonMilitary/Prefabs/Weapons/Modular_Presets/SM_Wep_Preset_B_Rifle_02.prefab",
+                "Assets/Data/Items/Weapons/Weapon_Groza.asset",
+                OutputFolder + "/Icon_Groza.png",
+                new Vector3(16f, 48f, 28f),
+                new Vector3(0.07f, -0.02f, 0f),
+                0.7f),
+            new WeaponIconJob(
+                "MK12",
+                "Assets/Synty/PolygonMilitary/Prefabs/Weapons/Modular_Presets/SM_Wep_Preset_A_Sniper_01.prefab",
+                "Assets/Data/Items/Weapons/Weapon_MK12.asset",
+                OutputFolder + "/Icon_MK12.png",
+                new Vector3(16f, 48f, 28f),
+                new Vector3(0.06f, -0.01f, 0f),
+                0.68f),
+            new WeaponIconJob(
+                "MCX",
+                "Assets/Synty/PolygonMilitary/Prefabs/Weapons/Modular_Presets/SM_Wep_Preset_A_SMG_01.prefab",
+                "Assets/Data/Items/Weapons/Weapon_MCX.asset",
+                OutputFolder + "/Icon_MCX.png",
+                new Vector3(16f, 48f, 28f),
+                new Vector3(0.06f, -0.01f, 0f),
+                0.68f),
         };
 
         foreach (var job in jobs)
@@ -94,6 +126,42 @@ public static class WeaponHudIconGenerator
             "Assets/Synty/PolygonMilitary/Prefabs/Weapons/Modular_Presets/SM_Wep_Preset_B_Rifle_03.prefab",
             "Assets/Data/Items/Weapons/Weapon_AK47.asset",
             EquipmentOutputFolder + "/Equip_AK47.png",
+            new Vector3(0f, 270f, 0f),
+            new Vector3(0f, 0f, 0f),
+            1.05f);
+
+        GenerateEquipmentSlotSingle(
+            "SVD_Equip",
+            "Assets/Synty/PolygonMilitary/Prefabs/Weapons/Modular_Presets/SM_Wep_Preset_B_Sniper_01.prefab",
+            "Assets/Data/Items/Weapons/Weapon_SVD.asset",
+            EquipmentOutputFolder + "/Equip_SVD.png",
+            new Vector3(0f, 270f, 0f),
+            new Vector3(0f, 0f, 0f),
+            1.50f);
+
+        GenerateEquipmentSlotSingle(
+            "Groza_Equip",
+            "Assets/Synty/PolygonMilitary/Prefabs/Weapons/Modular_Presets/SM_Wep_Preset_B_Rifle_02.prefab",
+            "Assets/Data/Items/Weapons/Weapon_Groza.asset",
+            EquipmentOutputFolder + "/Equip_Groza.png",
+            new Vector3(0f, 270f, 0f),
+            new Vector3(0f, 0f, 0f),
+            1.05f);
+
+        GenerateEquipmentSlotSingle(
+            "MK12_Equip",
+            "Assets/Synty/PolygonMilitary/Prefabs/Weapons/Modular_Presets/SM_Wep_Preset_A_Sniper_01.prefab",
+            "Assets/Data/Items/Weapons/Weapon_MK12.asset",
+            EquipmentOutputFolder + "/Equip_MK12.png",
+            new Vector3(0f, 270f, 0f),
+            new Vector3(0f, 0f, 0f),
+            1.05f);
+
+        GenerateEquipmentSlotSingle(
+            "MCX_Equip",
+            "Assets/Synty/PolygonMilitary/Prefabs/Weapons/Modular_Presets/SM_Wep_Preset_A_SMG_01.prefab",
+            "Assets/Data/Items/Weapons/Weapon_MCX.asset",
+            EquipmentOutputFolder + "/Equip_MCX.png",
             new Vector3(0f, 270f, 0f),
             new Vector3(0f, 0f, 0f),
             1.05f);

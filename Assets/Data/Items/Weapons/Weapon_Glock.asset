@@ -14,11 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponItemDefinition
   itemId: weapon_glock
   displayName: Glock
-  description: 9mm sidearm using the current P226 placeholder model and bridge.
+  description: 9mm sidearm using the SM_Wep_Pistol_01 model and P226 plugin bridge.
   icon: {fileID: 21300000, guid: 1f7470edb51e7b44494479c150a515da, type: 3}
   gridInventorySprite: {fileID: 21300000, guid: 0802c2de9f1c21a4ebddd252cded4f9c,
     type: 3}
-  worldPrefab: {fileID: 0}
+  worldPrefab: {fileID: 1252744804793604, guid: 191a40a97567c454dad88aa6ea16ac71,
+    type: 3}
+  valueTier: 0
+  moneyValue: 200
   weight: 1.1
   canStack: 0
   maxStackSize: 1
@@ -27,7 +30,8 @@ MonoBehaviour:
   canRotateInGrid: 0
   weaponCategory: 1
   fireMode: 0
-  equippedPrefab: {fileID: 100100000, guid: 31354f2fc9735834d855e7ec008a1cc2, type: 3}
+  equippedPrefab: {fileID: 1252744804793604, guid: 191a40a97567c454dad88aa6ea16ac71,
+    type: 3}
   compatibleAmmo: {fileID: 11400000, guid: 0fb479bd42983bf42bf5c2d881fb7755, type: 2}
   usesAmmo: 1
   magazineSize: 15

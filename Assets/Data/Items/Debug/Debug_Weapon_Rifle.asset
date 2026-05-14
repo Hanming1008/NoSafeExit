@@ -17,14 +17,14 @@ MonoBehaviour:
   description: Temporary rifle asset for inventory and equipment validation.
   icon: {fileID: 21300000, guid: e9c3d9a477385f34dbc312805f432e90, type: 3}
   gridInventorySprite: {fileID: 21300000, guid: 49f829b73fab95a4cbb296e9e94f9731, type: 3}
-  worldPrefab: {fileID: 0}
+  worldPrefab: {fileID: 1206012272168672, guid: a1f7d22f9f0fa1543bbbadeb0942f75d, type: 3}
   weight: 4.2
   canStack: 0
   maxStackSize: 1
   inventoryRows: 2
   inventoryColumns: 5
   canRotateInGrid: 0
-  equippedPrefab: {fileID: 0}
+  equippedPrefab: {fileID: 1206012272168672, guid: a1f7d22f9f0fa1543bbbadeb0942f75d, type: 3}
   compatibleAmmo: {fileID: 11400000, guid: 5a0807eb05cc9f9429f80cf25361a1f2, type: 2}
   usesAmmo: 1
   magazineSize: 30

@@ -15,8 +15,13 @@ MonoBehaviour:
   itemId: ammo_762x39mm
   displayName: 7.62*39 mm
   description: Standard 7.62 rifle ammunition.
-  icon: {fileID: 0}
-  worldPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: f6ee7b45b2454b34b8cd8d0c6c8b36ab, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: bd2f5572ad1de4d4a9743c9c4b1ede53,
+    type: 3}
+  worldPrefab: {fileID: 1364968598790260, guid: 18ec3f4f140dca44cad65132c8fcc35e,
+    type: 3}
+  valueTier: 0
+  moneyValue: 2
   weight: 0.01
   canStack: 1
   maxStackSize: 60

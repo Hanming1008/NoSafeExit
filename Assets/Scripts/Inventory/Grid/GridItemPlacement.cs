@@ -111,7 +111,7 @@ public class GridItemPlacement
             : 1;
         row = targetRow;
         column = targetColumn;
-        rotated = definition.canRotateInGrid && isRotated;
+        rotated = CanRotate(definition) && isRotated;
         runtimeData = ResolveRuntimeData(definition, itemRuntimeData);
         return true;
     }
@@ -158,7 +158,7 @@ public class GridItemPlacement
         if (definition == null)
             return 0;
 
-        return isRotated && definition.canRotateInGrid
+        return isRotated && CanRotate(definition)
             ? Mathf.Max(1, definition.inventoryColumns)
             : Mathf.Max(1, definition.inventoryRows);
     }
@@ -168,9 +168,17 @@ public class GridItemPlacement
         if (definition == null)
             return 0;
 
-        return isRotated && definition.canRotateInGrid
+        return isRotated && CanRotate(definition)
             ? Mathf.Max(1, definition.inventoryRows)
             : Mathf.Max(1, definition.inventoryColumns);
+    }
+
+    public static bool CanRotate(ItemDefinition definition)
+    {
+        if (definition == null)
+            return false;
+
+        return definition.canRotateInGrid || definition.inventoryRows > 1 || definition.inventoryColumns > 1;
     }
 
     private static ItemRuntimeData ResolveRuntimeData(ItemDefinition definition, ItemRuntimeData itemRuntimeData)

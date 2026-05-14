@@ -80,7 +80,16 @@ public class BulletProjectile : MonoBehaviour
     {
         IDamageable damageable = collision.collider.GetComponentInParent<IDamageable>();
         if (damageable != null && damageable.IsAlive)
-            damageable.TakeDamage(damage, owner);
+        {
+            Vector3 hitPoint = transform.position;
+            if (collision.contactCount > 0)
+                hitPoint = collision.GetContact(0).point;
+
+            if (damageable is PlayerStats playerStats)
+                playerStats.TakeDamage(damage, owner, collision.collider, hitPoint);
+            else
+                damageable.TakeDamage(damage, owner);
+        }
 
         SpawnImpactVfx(collision);
         Destroy(gameObject);

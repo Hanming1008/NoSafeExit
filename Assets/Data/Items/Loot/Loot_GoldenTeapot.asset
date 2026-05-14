@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e21095e583fb7ba4ab197e697022b0ed, type: 3}
+  m_Name: Loot_GoldenTeapot
+  m_EditorClassIdentifier: Assembly-CSharp::LootItemDefinition
+  itemId: loot_golden_teapot
+  displayName: Golden Teapot
+  description: A valuable golden teapot.
+  icon: {fileID: 21300000, guid: d7c1398a909f53548b9b71234b978be7, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: 30678af8b3a2e0e46973de95e21cfb7c,
+    type: 3}
+  worldPrefab: {fileID: 1968650172165672, guid: f1a8baffeb0da9c41b5f7995d2521c19,
+    type: 3}
+  valueTier: 2
+  moneyValue: 9000
+  weight: 1.8
+  canStack: 0
+  maxStackSize: 1
+  inventoryRows: 2
+  inventoryColumns: 1
+  canRotateInGrid: 0
+  isCurrency: 0

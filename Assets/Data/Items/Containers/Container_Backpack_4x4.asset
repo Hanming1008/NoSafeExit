@@ -10,25 +10,30 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7aebb63f40540614ea88b4d8d0ce36aa, type: 3}
-  m_Name: Container_Backpack_4x4
+  m_Name: Container_Backpack_Large
   m_EditorClassIdentifier: Assembly-CSharp::ContainerItemDefinition
-  itemId: container_backpack_4x4
-  displayName: Basic Backpack
-  description: Compact field backpack with a 4x4 internal grid.
-  icon: {fileID: 21300000, guid: fca83f07cf53e0844a9b7f61792d091b, type: 3}
-  gridInventorySprite: {fileID: 21300000, guid: fca83f07cf53e0844a9b7f61792d091b,
+  itemId: container_backpack_large
+  displayName: Large Backpack
+  description: Large field backpack with a 6x5 internal grid.
+  icon: {fileID: 21300000, guid: 4c8f2bbde7c323e47958052c3722d937, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: 4c8f2bbde7c323e47958052c3722d937,
     type: 3}
   worldPrefab: {fileID: 0}
-  weight: 2.5
+  valueTier: 1
+  moneyValue: 2000
+  weight: 4.2
   canStack: 0
   maxStackSize: 1
-  inventoryRows: 4
-  inventoryColumns: 4
+  inventoryRows: 6
+  inventoryColumns: 5
   canRotateInGrid: 0
   containerKind: 2
-  gridRows: 4
-  gridColumns: 4
-  equippedVisualPrefab: {fileID: 0}
+  gridRows: 6
+  gridColumns: 5
+  equippedVisualPrefab: {fileID: 1105299241195476, guid: 5b2c612ff982504438c401921c6d4f93,
+    type: 3}
   equippedVisualObjectNames:
   - SM_Chr_Attach_Backpack_01
   hiddenVisualObjectNames: []
+  worldVisualPrefabs:
+  - {fileID: 1105299241195476, guid: 5b2c612ff982504438c401921c6d4f93, type: 3}

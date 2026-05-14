@@ -20,12 +20,14 @@ MonoBehaviour:
     type: 3}
   worldPrefab: {fileID: 1696470999167582, guid: 114c2a63149bb13459f2793b89a42416,
     type: 3}
+  valueTier: 0
+  moneyValue: 15
   weight: 1
   canStack: 1
   maxStackSize: 3
   inventoryRows: 2
   inventoryColumns: 1
   canRotateInGrid: 0
-  hydrationRestoreAmount: 35
+  hydrationRestoreAmount: 10
   hungerRestoreAmount: 0
-  useDuration: 1.4
+  useDuration: 3

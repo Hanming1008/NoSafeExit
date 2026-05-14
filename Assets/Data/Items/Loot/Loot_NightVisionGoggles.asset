@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e21095e583fb7ba4ab197e697022b0ed, type: 3}
+  m_Name: Loot_NightVisionGoggles
+  m_EditorClassIdentifier: Assembly-CSharp::LootItemDefinition
+  itemId: loot_night_vision_goggles
+  displayName: Night Vision Goggles
+  description: A high-value night vision device.
+  icon: {fileID: 21300000, guid: fe190b2a93f0efe48a32ed20d5b39fda, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: 34e5df33e807a1945a16563a2f04d827,
+    type: 3}
+  worldPrefab: {fileID: 1039837060963558, guid: 94635f137bb85264caee9b9b4cbc9c9c,
+    type: 3}
+  valueTier: 1
+  moneyValue: 40000
+  weight: 0.8
+  canStack: 0
+  maxStackSize: 1
+  inventoryRows: 1
+  inventoryColumns: 2
+  canRotateInGrid: 0
+  isCurrency: 0

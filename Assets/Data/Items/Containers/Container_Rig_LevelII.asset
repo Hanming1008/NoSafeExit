@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7aebb63f40540614ea88b4d8d0ce36aa, type: 3}
+  m_Name: Container_Rig_LevelII
+  m_EditorClassIdentifier: Assembly-CSharp::ContainerItemDefinition
+  itemId: container_rig_level_ii
+  displayName: Level II Armor Container
+  description: Internal 4x3 capacity container provided by Level II Body Armor.
+  icon: {fileID: 21300000, guid: c76d560fe6198e242bb753f23e0986db, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: c76d560fe6198e242bb753f23e0986db,
+    type: 3}
+  worldPrefab: {fileID: 0}
+  valueTier: 0
+  moneyValue: 1500
+  weight: 1.8
+  canStack: 0
+  maxStackSize: 1
+  inventoryRows: 3
+  inventoryColumns: 4
+  canRotateInGrid: 0
+  containerKind: 1
+  gridRows: 3
+  gridColumns: 4
+  equippedVisualPrefab: {fileID: 0}
+  equippedVisualObjectNames:
+  - LevelII_SM_Chr_Attach_Pouch_Mag_Single_01
+  - LevelII_SM_Chr_Attach_Tool_01
+  - LevelII_SM_Chr_Attach_Tool_02
+  - LevelII_SM_Chr_Attach_Bomb_C4_01
+  - LevelII_SM_Chr_Attach_ShellStrip_Rifle_01
+  - LevelII_SM_Chr_Attach_ShellStrip_Rifle_01 (1)
+  - LevelII_SM_Chr_Attach_Padding_01
+  hiddenVisualObjectNames: []
+  worldVisualPrefabs: []

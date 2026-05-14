@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8bca985a8299b0b41bcb2d4af9468d58, type: 3}
+  m_Name: Armor_Body_LevelII
+  m_EditorClassIdentifier: Assembly-CSharp::ArmorItemDefinition
+  itemId: armor_body_level_ii
+  displayName: Level II Body Armor
+  description: Medium body armor with improved torso protection and rig storage.
+  icon: {fileID: 21300000, guid: c76d560fe6198e242bb753f23e0986db, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: c76d560fe6198e242bb753f23e0986db,
+    type: 3}
+  worldPrefab: {fileID: 0}
+  valueTier: 0
+  moneyValue: 1500
+  weight: 7.2
+  canStack: 0
+  maxStackSize: 1
+  inventoryRows: 3
+  inventoryColumns: 4
+  canRotateInGrid: 0
+  armorSlot: 1
+  damageReduction: 0.32
+  maxDurability: 125
+  providedRigContainer: {fileID: 11400000, guid: 70082585d1224b168194f40e947f4c03,
+    type: 2}
+  equippedVisualPrefab: {fileID: 0}
+  equippedVisualObjectNames:
+  - LevelII_SM_Chr_Attach_Pouch_Mag_Single_01
+  - LevelII_SM_Chr_Attach_Tool_01
+  - LevelII_SM_Chr_Attach_Tool_02
+  - LevelII_SM_Chr_Attach_Bomb_C4_01
+  - LevelII_SM_Chr_Attach_ShellStrip_Rifle_01
+  - LevelII_SM_Chr_Attach_ShellStrip_Rifle_01 (1)
+  - LevelII_SM_Chr_Attach_Padding_01
+  hiddenVisualObjectNames: []
+  worldVisualPrefabs: []

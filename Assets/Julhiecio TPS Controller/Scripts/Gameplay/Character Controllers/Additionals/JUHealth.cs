@@ -71,15 +71,28 @@ namespace JUTPS
             Health = Mathf.Clamp(Health, 0, MaxHealth);
         }
 
-        public void DoDamage(float damage)
+        public float DoDamage(float damage)
         {
-            DoDamage(new DamageInfo { Damage = damage });
+            return DoDamage(new DamageInfo { Damage = damage });
         }
 
-        public void DoDamage(DamageInfo damageInfo)
+        public float DoDamage(DamageInfo damageInfo)
         {
             if (Invincible || IsDead)
-                return;
+                return 0f;
+
+            global::PlayerStats playerStats = GetComponent<global::PlayerStats>();
+            if (playerStats == null)
+                playerStats = GetComponentInParent<global::PlayerStats>();
+            if (playerStats == null)
+                playerStats = GetComponentInChildren<global::PlayerStats>(true);
+
+            if (playerStats != null)
+            {
+                damageInfo.Damage = playerStats.ApplyArmorToIncomingPluginDamage(damageInfo.Damage, damageInfo.HitPosition);
+                if (damageInfo.Damage <= 0f)
+                    return 0f;
+            }
 
             Health -= damageInfo.Damage;
             LimitHealth();
@@ -94,6 +107,7 @@ namespace JUTPS
             }
 
             OnDamaged.Invoke(damageInfo);
+            return damageInfo.Damage;
         }
 
         internal void CheckHealthState()

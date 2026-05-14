@@ -13,6 +13,9 @@ public class ContainerItemDefinition : ItemDefinition
     public string[] equippedVisualObjectNames;
     public string[] hiddenVisualObjectNames;
 
+    [Header("World Pickup")]
+    public GameObject[] worldVisualPrefabs;
+
     public override ItemType Type => ItemType.Container;
 
     protected override void OnValidate()

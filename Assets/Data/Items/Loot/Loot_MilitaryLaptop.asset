@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e21095e583fb7ba4ab197e697022b0ed, type: 3}
+  m_Name: Loot_MilitaryLaptop
+  m_EditorClassIdentifier: Assembly-CSharp::LootItemDefinition
+  itemId: loot_military_laptop
+  displayName: Military Laptop
+  description: A rugged military laptop with sensitive operational data.
+  icon: {fileID: 21300000, guid: d2da2fc3b5c3e6f4eb8d0a182a6f4f05, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: 4ce4555fb4c484a42954562b85ece79d,
+    type: 3}
+  worldPrefab: {fileID: 1996966326461686, guid: ddd86d7af25c49b439501a3ac34ca0b0,
+    type: 3}
+  valueTier: 2
+  moneyValue: 20000
+  weight: 2.4
+  canStack: 0
+  maxStackSize: 1
+  inventoryRows: 2
+  inventoryColumns: 2
+  canRotateInGrid: 0
+  isCurrency: 0

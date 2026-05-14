@@ -16,6 +16,9 @@ public class GameplayUIRoot : MonoBehaviour
     private static readonly Color GridFrameHoverColor = new Color(0.34f, 0.88f, 0.56f, 1f);
     private static readonly Color GridFrameInvalidColor = new Color(0.92f, 0.34f, 0.34f, 0.98f);
     private static readonly Color EquipmentHoverColor = new Color(0.20f, 0.42f, 0.26f, 0.98f);
+    private static readonly Color ValueTierBlueColor = new Color(0.13f, 0.26f, 0.40f, 0.98f);
+    private static readonly Color ValueTierGoldColor = new Color(0.86f, 0.68f, 0.08f, 0.98f);
+    private static readonly Color ValueTierRedColor = new Color(0.48f, 0.10f, 0.12f, 0.98f);
 
     private sealed class SlotView
     {
@@ -53,6 +56,7 @@ public class GameplayUIRoot : MonoBehaviour
     private sealed class GridPlacementView
     {
         public RectTransform rect;
+        public RectTransform contentRect;
         public Image background;
         public Image iconImage;
         public Text nameText;
@@ -70,17 +74,21 @@ public class GameplayUIRoot : MonoBehaviour
     private sealed class GridDragState
     {
         public bool sourceIsEquipment;
+        public bool sourceIsCorpseEquipment;
         public bool sourceIsPopup;
         public bool sourceIsExternal;
         public GridContainerKind sourceContainerKind;
         public EquipmentSlotType sourceEquipmentSlotType;
+        public EquipmentSlotType sourceCorpseEquipmentSlotType;
         public int sourceSlotIndex;
         public string runtimeInstanceId;
         public ItemDefinition item;
         public int quantity;
         public int sourceRow;
         public int sourceColumn;
+        public bool sourceRotated;
         public bool rotated;
+        public int rotationQuarterTurns;
         public ItemRuntimeData runtimeData;
     }
 
@@ -167,7 +175,7 @@ public class GameplayUIRoot : MonoBehaviour
 
     [Header("Grid Inventory Test Mode")]
     [SerializeField] private bool singleGridTestMode = true;
-    [SerializeField] private string singleGridTestItemId = "debug_chest_rig";
+    [SerializeField] private string singleGridTestItemId = "armor_body_level_i";
 
     [Header("UI")]
     [SerializeField] private bool showMinimap = true;
@@ -175,6 +183,7 @@ public class GameplayUIRoot : MonoBehaviour
     private readonly List<SlotView> backpackSlotViews = new List<SlotView>();
     private readonly List<SlotView> quickbarSlotViews = new List<SlotView>();
     private readonly Dictionary<EquipmentSlotType, SlotView> equipmentSlotViews = new Dictionary<EquipmentSlotType, SlotView>();
+    private readonly Dictionary<EquipmentSlotType, SlotView> corpseEquipmentSlotViews = new Dictionary<EquipmentSlotType, SlotView>();
     private readonly Dictionary<GridContainerKind, GridContainerView> gridContainerViews = new Dictionary<GridContainerKind, GridContainerView>();
     private readonly Dictionary<GridContainerKind, GridContainerState> gridDisplayStates = new Dictionary<GridContainerKind, GridContainerState>();
     private readonly Dictionary<string, Sprite> gridFrameSpriteCache = new Dictionary<string, Sprite>();
@@ -201,7 +210,10 @@ public class GameplayUIRoot : MonoBehaviour
     private RectTransform contextMenuPanel;
     private RectTransform containerPopupPanel;
     private RectTransform dropDialogPanel;
+    private RectTransform splitDialogPanel;
+    private RectTransform useProgressPanel;
     private RectTransform rightWorkspacePanel;
+    private RectTransform corpseLootPanel;
     private Text equipmentSummaryText;
     private Text inventoryWeightText;
     private Text operatorPreviewFallbackText;
@@ -223,17 +235,25 @@ public class GameplayUIRoot : MonoBehaviour
     private Text fullMapArrowText;
     private Text rightWorkspaceTitleText;
     private Text rightWorkspaceHintText;
+    private Text rightWorkspaceCashText;
     private Text contextPrimaryText;
     private Text contextSecondaryText;
     private Text containerPopupTitleText;
     private Text dropDialogTitleText;
     private Text dropDialogQuantityText;
+    private Text splitDialogTitleText;
+    private Text splitDialogMaxText;
+    private Text useProgressCountdownText;
+    private Text useProgressItemNameText;
     private Image healthBarFillImage;
     private Image equipmentHealthBarFillImage;
     private Image hydrationBarFillImage;
     private Image hungerBarFillImage;
     private Image weightBarFillImage;
     private RawImage operatorPreviewImage;
+    private Image useProgressBackgroundImage;
+    private Image useProgressRingImage;
+    private Image useProgressItemIconImage;
     private Image weaponHudIconImage;
     private Image weaponHudIconFrame;
     private RawImage minimapFeedImage;
@@ -241,16 +261,27 @@ public class GameplayUIRoot : MonoBehaviour
 
     private Button contextPrimaryButton;
     private Button contextSecondaryButton;
+    private Button contextInspectButton;
+    private Button contextSplitButton;
     private Button contextDropButton;
     private Button containerPopupCloseButton;
     private Button dropMinusButton;
     private Button dropPlusButton;
     private Button dropConfirmButton;
     private Button dropCancelButton;
+    private Button splitMinusButton;
+    private Button splitPlusButton;
+    private Button splitConfirmButton;
+    private Button splitCancelButton;
+    private Slider splitQuantitySlider;
+    private InputField splitQuantityInput;
+    private Image splitDialogItemIconImage;
     private InventoryCharacterPreview inventoryCharacterPreview;
+    private ItemInspectPanel itemInspectPanel;
 
     private int selectedBackpackSlotIndex = -1;
     private int selectedEquipmentSlotTypeIndex = -1;
+    private int selectedCorpseEquipmentSlotTypeIndex = -1;
     private GridContainerKind selectedCarryContainerKind = GridContainerKind.Pocket;
     private string selectedCarryRuntimeInstanceId = string.Empty;
     private string selectedPopupRuntimeInstanceId = string.Empty;
@@ -266,7 +297,17 @@ public class GameplayUIRoot : MonoBehaviour
     private ItemDefinition openedContainerDefinition;
     private int dropDialogSlotIndex = -1;
     private int dropDialogQuantity = 1;
+    private GridContainerState splitDialogContainer;
+    private string splitDialogRuntimeInstanceId = string.Empty;
+    private int splitDialogSourceRow = -1;
+    private int splitDialogSourceColumn = -1;
+    private bool splitDialogSourceRotated;
+    private ItemDefinition splitDialogItem;
+    private int splitDialogMaxQuantity = 1;
+    private int splitDialogQuantity = 1;
+    private bool splitDialogUpdating;
     private bool contextMenuTargetsEquipmentSlot;
+    private bool contextMenuTargetsCorpseEquipmentSlot;
     private bool contextMenuTargetsCarryPlacement;
     private bool contextMenuTargetsPopupPlacement;
     private bool uiBuilt;
@@ -285,16 +326,24 @@ public class GameplayUIRoot : MonoBehaviour
 
     private GridContainerView containerPopupView;
     private GridContainerView externalContainerView;
+    private GridContainerView corpsePocketView;
     private GridDragState activeGridDrag;
     private RectTransform gridDragPreviewRect;
+    private RectTransform gridDragPreviewContentRect;
     private Image gridDragPreviewBackground;
     private Image gridDragPreviewIcon;
+    private Text gridDragPreviewNameText;
     private Text gridDragPreviewQuantityText;
     private RectTransform gridDropPreviewRect;
+    private RectTransform gridDropPreviewContentRect;
     private Image gridDropPreviewBackground;
     private Image gridDropPreviewIcon;
+    private Text gridDropPreviewNameText;
     private Outline gridDropPreviewOutline;
     private SearchableContainer openedSearchableContainer;
+    private EnemyCorpseLoot openedCorpseLoot;
+    private Sprite useProgressCircleSprite;
+    private Sprite useProgressRingSprite;
 
     void Awake()
     {
@@ -332,11 +381,16 @@ public class GameplayUIRoot : MonoBehaviour
         if (dropDialogPanel != null && dropDialogPanel.gameObject.activeSelf)
             return;
 
+        if (splitDialogPanel != null && splitDialogPanel.gameObject.activeSelf)
+            return;
+
         if (Event.current.type != EventType.MouseDown || Event.current.button != 1)
             return;
 
         Vector2 guiPointerPosition = Event.current.mousePosition;
-        if (!TryOpenBackpackContextMenuAtGui(guiPointerPosition) && !TryOpenEquipmentContextMenuAtGui(guiPointerPosition))
+        if (!TryOpenBackpackContextMenuAtGui(guiPointerPosition)
+            && !TryOpenEquipmentContextMenuAtGui(guiPointerPosition)
+            && !TryOpenCorpseEquipmentContextMenuAtGui(guiPointerPosition))
             return;
 
         Event.current.Use();
@@ -356,13 +410,14 @@ public class GameplayUIRoot : MonoBehaviour
         selectedCarryRuntimeInstanceId = string.Empty;
         selectedPopupRuntimeInstanceId = string.Empty;
         contextMenuTargetsEquipmentSlot = false;
+        contextMenuTargetsCorpseEquipmentSlot = false;
         contextMenuTargetsCarryPlacement = false;
         contextMenuTargetsPopupPlacement = false;
 
         bool showPrimary = false;
         bool showSecondary = false;
 
-        if (slot.Item is MedicalItemDefinition)
+        if (itemUse != null && itemUse.CanUse(slot.Item))
         {
             contextPrimaryText.text = "Use";
             contextSecondaryText.text = "Quickbar";
@@ -382,6 +437,8 @@ public class GameplayUIRoot : MonoBehaviour
 
         contextPrimaryButton.gameObject.SetActive(showPrimary);
         contextSecondaryButton.gameObject.SetActive(showSecondary);
+        contextInspectButton.gameObject.SetActive(true);
+        contextSplitButton.gameObject.SetActive(false);
         contextDropButton.gameObject.SetActive(true);
 
         PositionPanelAtScreenPoint(contextMenuPanel, screenPosition);
@@ -403,16 +460,56 @@ public class GameplayUIRoot : MonoBehaviour
         selectedCarryRuntimeInstanceId = string.Empty;
         selectedPopupRuntimeInstanceId = string.Empty;
         contextMenuTargetsEquipmentSlot = true;
+        contextMenuTargetsCorpseEquipmentSlot = false;
         contextMenuTargetsCarryPlacement = false;
         contextMenuTargetsPopupPlacement = false;
 
         bool showUnequip = CanUnequipEquipmentSlot(slotType);
         bool showDrop = CanDropEquipmentSlot(slotType);
+        bool showOpen = CanOpenContainerItem(slot.Item, slot.RuntimeData);
 
         contextPrimaryText.text = "Unequip";
         contextPrimaryButton.gameObject.SetActive(showUnequip);
-        contextSecondaryButton.gameObject.SetActive(false);
+        contextSecondaryText.text = "Open";
+        contextSecondaryButton.gameObject.SetActive(showOpen);
+        contextInspectButton.gameObject.SetActive(true);
+        contextSplitButton.gameObject.SetActive(false);
         contextDropButton.gameObject.SetActive(showDrop);
+
+        PositionPanelAtScreenPoint(contextMenuPanel, screenPosition);
+        contextMenuPanel.SetAsLastSibling();
+        contextMenuPanel.gameObject.SetActive(true);
+    }
+
+    public void OpenContextMenuForCorpseEquipmentSlot(EquipmentSlotType slotType, Vector2 screenPosition)
+    {
+        if (inventoryPanel == null || !inventoryPanel.gameObject.activeSelf || openedCorpseLoot == null)
+            return;
+
+        InventorySlot slot = openedCorpseLoot.GetSlot(slotType);
+        if (slot == null || slot.IsEmpty)
+            return;
+
+        selectedBackpackSlotIndex = -1;
+        selectedEquipmentSlotTypeIndex = -1;
+        selectedCorpseEquipmentSlotTypeIndex = (int)slotType;
+        selectedCarryRuntimeInstanceId = string.Empty;
+        selectedPopupRuntimeInstanceId = string.Empty;
+        contextMenuTargetsEquipmentSlot = false;
+        contextMenuTargetsCorpseEquipmentSlot = true;
+        contextMenuTargetsCarryPlacement = false;
+        contextMenuTargetsPopupPlacement = false;
+
+        bool showPrimary = slot.Item is WeaponItemDefinition || slot.Item is ArmorItemDefinition || slot.Item is ContainerItemDefinition;
+        bool showSecondary = CanOpenContainerItem(slot.Item, slot.RuntimeData);
+
+        contextPrimaryText.text = "Equip";
+        contextPrimaryButton.gameObject.SetActive(showPrimary);
+        contextSecondaryText.text = "Open";
+        contextSecondaryButton.gameObject.SetActive(showSecondary);
+        contextInspectButton.gameObject.SetActive(true);
+        contextSplitButton.gameObject.SetActive(false);
+        contextDropButton.gameObject.SetActive(true);
 
         PositionPanelAtScreenPoint(contextMenuPanel, screenPosition);
         contextMenuPanel.SetAsLastSibling();
@@ -438,18 +535,23 @@ public class GameplayUIRoot : MonoBehaviour
         selectedPopupRotated = false;
         selectedPopupItem = null;
         contextMenuTargetsEquipmentSlot = false;
+        contextMenuTargetsCorpseEquipmentSlot = false;
         contextMenuTargetsCarryPlacement = true;
         contextMenuTargetsPopupPlacement = false;
 
         bool showPrimary = placement.Item is WeaponItemDefinition
             || placement.Item is ArmorItemDefinition
-            || placement.Item is ContainerItemDefinition;
+            || placement.Item is ContainerItemDefinition
+            || (itemUse != null && itemUse.CanUse(placement.Item));
         bool showSecondary = CanOpenContainerItem(placement.Item, placement.RuntimeData);
+        bool showSplit = placement.Item.canStack && placement.Quantity > 1;
 
-        contextPrimaryText.text = "Equip";
+        contextPrimaryText.text = itemUse != null && itemUse.CanUse(placement.Item) ? "Use" : "Equip";
         contextPrimaryButton.gameObject.SetActive(showPrimary);
         contextSecondaryText.text = "Open";
         contextSecondaryButton.gameObject.SetActive(showSecondary);
+        contextInspectButton.gameObject.SetActive(true);
+        contextSplitButton.gameObject.SetActive(showSplit);
         contextDropButton.gameObject.SetActive(true);
 
         PositionPanelAtScreenPoint(contextMenuPanel, screenPosition);
@@ -475,18 +577,23 @@ public class GameplayUIRoot : MonoBehaviour
         selectedPopupRotated = placement.Rotated;
         selectedPopupItem = placement.Item;
         contextMenuTargetsEquipmentSlot = false;
+        contextMenuTargetsCorpseEquipmentSlot = false;
         contextMenuTargetsCarryPlacement = false;
         contextMenuTargetsPopupPlacement = true;
 
         bool showPrimary = placement.Item is WeaponItemDefinition
             || placement.Item is ArmorItemDefinition
-            || placement.Item is ContainerItemDefinition;
+            || placement.Item is ContainerItemDefinition
+            || (itemUse != null && itemUse.CanUse(placement.Item));
         bool showSecondary = CanOpenContainerItem(placement.Item, placement.RuntimeData);
+        bool showSplit = placement.Item.canStack && placement.Quantity > 1;
 
-        contextPrimaryText.text = "Equip";
+        contextPrimaryText.text = itemUse != null && itemUse.CanUse(placement.Item) ? "Use" : "Equip";
         contextPrimaryButton.gameObject.SetActive(showPrimary);
         contextSecondaryText.text = "Open";
         contextSecondaryButton.gameObject.SetActive(showSecondary);
+        contextInspectButton.gameObject.SetActive(true);
+        contextSplitButton.gameObject.SetActive(showSplit);
         contextDropButton.gameObject.SetActive(true);
 
         PositionPanelAtScreenPoint(contextMenuPanel, screenPosition);
@@ -513,7 +620,7 @@ public class GameplayUIRoot : MonoBehaviour
             return false;
 
         bool usedSuccessfully = itemUse.TryUseAssignedItem(assignedItem);
-        if (inventory != null && inventory.GetQuantity(assignedItem) <= 0)
+        if (GetCarriedItemQuantity(assignedItem) <= 0)
             quickbar.ClearSlot(slotIndex);
 
         RefreshAll();
@@ -559,7 +666,8 @@ public class GameplayUIRoot : MonoBehaviour
             || minimapSystem == null
             || juCharacter == null
             || juInteractionSystem == null
-            || (juHealth == null && playerStats == null)
+            || juHealth == null
+            || playerStats == null
             || playerRigidbody == null;
     }
 
@@ -570,7 +678,10 @@ public class GameplayUIRoot : MonoBehaviour
             inventoryPanel.gameObject.SetActive(shouldOpen);
 
         if (!shouldOpen)
+        {
+            itemInspectPanel?.Hide();
             CloseExternalContainer();
+        }
 
         if (shouldOpen && fullMapPanel != null)
         {
@@ -591,9 +702,13 @@ public class GameplayUIRoot : MonoBehaviour
         if (dropDialogPanel != null)
             dropDialogPanel.gameObject.SetActive(false);
 
+        if (splitDialogPanel != null)
+            splitDialogPanel.gameObject.SetActive(false);
+
         if (containerPopupPanel != null)
             containerPopupPanel.gameObject.SetActive(false);
 
+        itemInspectPanel?.Hide();
         CancelGridDrag();
         ClearContextSelection();
         RefreshAll();
@@ -606,6 +721,7 @@ public class GameplayUIRoot : MonoBehaviour
 
         container.EnsureInitialized();
         openedSearchableContainer = container;
+        openedCorpseLoot = null;
 
         if (inventoryPanel != null)
             inventoryPanel.gameObject.SetActive(true);
@@ -628,6 +744,43 @@ public class GameplayUIRoot : MonoBehaviour
         if (dropDialogPanel != null)
             dropDialogPanel.gameObject.SetActive(false);
 
+        itemInspectPanel?.Hide();
+        CancelGridDrag();
+        ClearContextSelection();
+        RefreshAll();
+    }
+
+    public void OpenInventoryWithCorpse(EnemyCorpseLoot corpseLoot)
+    {
+        if (corpseLoot == null || !corpseLoot.IsSearchable)
+            return;
+
+        corpseLoot.EnsureInitialized();
+        openedCorpseLoot = corpseLoot;
+        openedSearchableContainer = null;
+
+        if (inventoryPanel != null)
+            inventoryPanel.gameObject.SetActive(true);
+
+        if (fullMapPanel != null)
+            fullMapPanel.gameObject.SetActive(false);
+
+        if (minimapSystem != null)
+            minimapSystem.SetFullMapActive(false);
+
+        if (minimapPanel != null)
+            minimapPanel.gameObject.SetActive(showMinimap);
+
+        if (contextMenuPanel != null)
+            contextMenuPanel.gameObject.SetActive(false);
+
+        if (containerPopupPanel != null)
+            containerPopupPanel.gameObject.SetActive(false);
+
+        if (dropDialogPanel != null)
+            dropDialogPanel.gameObject.SetActive(false);
+
+        itemInspectPanel?.Hide();
         CancelGridDrag();
         ClearContextSelection();
         RefreshAll();
@@ -636,8 +789,11 @@ public class GameplayUIRoot : MonoBehaviour
     private void CloseExternalContainer()
     {
         openedSearchableContainer = null;
+        openedCorpseLoot = null;
         if (externalContainerView != null)
             ClearGridPlacementViews(externalContainerView);
+        if (corpsePocketView != null)
+            ClearGridPlacementViews(corpsePocketView);
     }
 
     private void ToggleFullMap()
@@ -664,6 +820,7 @@ public class GameplayUIRoot : MonoBehaviour
         if (containerPopupPanel != null)
             containerPopupPanel.gameObject.SetActive(false);
 
+        itemInspectPanel?.Hide();
         CancelGridDrag();
         ClearContextSelection();
         if (minimapPanel != null)
@@ -686,6 +843,18 @@ public class GameplayUIRoot : MonoBehaviour
             return;
         }
 
+        if (splitDialogPanel != null && splitDialogPanel.gameObject.activeSelf)
+        {
+            HideSplitDialog();
+            return;
+        }
+
+        if (itemInspectPanel != null && itemInspectPanel.IsOpen)
+        {
+            itemInspectPanel.Hide();
+            return;
+        }
+
         if (containerPopupPanel != null && containerPopupPanel.gameObject.activeSelf)
         {
             CloseContainerPopup();
@@ -702,6 +871,7 @@ public class GameplayUIRoot : MonoBehaviour
         if (inventoryPanel != null && inventoryPanel.gameObject.activeSelf)
         {
             inventoryPanel.gameObject.SetActive(false);
+            itemInspectPanel?.Hide();
             CloseExternalContainer();
             return;
         }
@@ -739,9 +909,38 @@ public class GameplayUIRoot : MonoBehaviour
             return;
         }
 
+        if (contextMenuTargetsCorpseEquipmentSlot)
+        {
+            bool corpseChanged = selectedCorpseEquipmentSlotTypeIndex >= 0
+                && TryHandleCorpseEquipmentEquip((EquipmentSlotType)selectedCorpseEquipmentSlotTypeIndex);
+
+            contextMenuPanel.gameObject.SetActive(false);
+            ClearContextSelection();
+
+            if (corpseChanged)
+            {
+                equipmentVisuals?.ForceRefreshNow();
+                RefreshAll();
+            }
+
+            return;
+        }
+
         if (contextMenuTargetsCarryPlacement)
         {
-            bool carryChanged = TryHandleCarryPlacementEquip();
+            GridContainerState container = GetActualContainerState(selectedCarryContainerKind);
+            GridItemPlacement placement = FindSelectedPlacement(
+                container,
+                selectedCarryRuntimeInstanceId,
+                selectedCarryRow,
+                selectedCarryColumn,
+                selectedCarryRotated,
+                selectedCarryItem);
+            bool startedUse = placement != null
+                && itemUse != null
+                && itemUse.CanUse(placement.Item)
+                && itemUse.TryUseGridPlacement(container, placement);
+            bool carryChanged = startedUse || TryHandleCarryPlacementEquip();
 
             CloseContainerPopup();
             contextMenuPanel.gameObject.SetActive(false);
@@ -749,6 +948,9 @@ public class GameplayUIRoot : MonoBehaviour
 
             if (carryChanged)
             {
+                if (startedUse)
+                    CloseInventoryForItemUse();
+
                 equipmentVisuals?.ForceRefreshNow();
                 RefreshAll();
             }
@@ -758,13 +960,28 @@ public class GameplayUIRoot : MonoBehaviour
 
         if (contextMenuTargetsPopupPlacement)
         {
-            bool popupChanged = TryHandlePopupPlacementEquip();
+            GridContainerState container = openedContainerRuntimeData != null ? openedContainerRuntimeData.StoredContainerState : null;
+            GridItemPlacement placement = FindSelectedPlacement(
+                container,
+                selectedPopupRuntimeInstanceId,
+                selectedPopupRow,
+                selectedPopupColumn,
+                selectedPopupRotated,
+                selectedPopupItem);
+            bool startedUse = placement != null
+                && itemUse != null
+                && itemUse.CanUse(placement.Item)
+                && itemUse.TryUseGridPlacement(container, placement);
+            bool popupChanged = startedUse || TryHandlePopupPlacementEquip();
 
             contextMenuPanel.gameObject.SetActive(false);
             ClearContextSelection();
 
             if (popupChanged)
             {
+                if (startedUse)
+                    CloseInventoryForItemUse();
+
                 equipmentVisuals?.ForceRefreshNow();
                 RefreshAll();
             }
@@ -780,7 +997,7 @@ public class GameplayUIRoot : MonoBehaviour
         ItemRuntimeData selectedRuntimeData = slot.RuntimeData;
         bool changed = false;
 
-        if (slot.Item is MedicalItemDefinition)
+        if (itemUse != null && itemUse.CanUse(slot.Item))
         {
             changed = itemUse != null && itemUse.TryUseBackpackSlot(selectedBackpackSlotIndex);
         }
@@ -807,6 +1024,9 @@ public class GameplayUIRoot : MonoBehaviour
 
         if (changed)
         {
+            if (itemUse != null && itemUse.CanUse(selectedItem))
+                CloseInventoryForItemUse();
+
             CloseContainerPopupIfEquippedItem(selectedItem, selectedRuntimeData);
             equipmentVisuals?.ForceRefreshNow();
             RefreshAll();
@@ -815,6 +1035,36 @@ public class GameplayUIRoot : MonoBehaviour
 
     private void OnContextSecondaryAction()
     {
+        if (contextMenuTargetsEquipmentSlot)
+        {
+            InventorySlot equipmentSlot = equipment != null && selectedEquipmentSlotTypeIndex >= 0
+                ? equipment.GetSlot((EquipmentSlotType)selectedEquipmentSlotTypeIndex)
+                : null;
+            if (equipmentSlot != null && !equipmentSlot.IsEmpty && CanOpenContainerItem(equipmentSlot.Item, equipmentSlot.RuntimeData))
+            {
+                OpenContainerPopup(equipmentSlot.Item, equipmentSlot.RuntimeData, GetAdjacentPanelScreenPoint(contextMenuPanel));
+                contextMenuPanel.gameObject.SetActive(false);
+                ClearContextSelection();
+            }
+
+            return;
+        }
+
+        if (contextMenuTargetsCorpseEquipmentSlot)
+        {
+            InventorySlot corpseSlot = openedCorpseLoot != null && selectedCorpseEquipmentSlotTypeIndex >= 0
+                ? openedCorpseLoot.GetSlot((EquipmentSlotType)selectedCorpseEquipmentSlotTypeIndex)
+                : null;
+            if (corpseSlot != null && !corpseSlot.IsEmpty && CanOpenContainerItem(corpseSlot.Item, corpseSlot.RuntimeData))
+            {
+                OpenContainerPopup(corpseSlot.Item, corpseSlot.RuntimeData, GetAdjacentPanelScreenPoint(contextMenuPanel));
+                contextMenuPanel.gameObject.SetActive(false);
+                ClearContextSelection();
+            }
+
+            return;
+        }
+
         if (contextMenuTargetsCarryPlacement)
         {
             GridContainerState container = GetActualContainerState(selectedCarryContainerKind);
@@ -874,15 +1124,173 @@ public class GameplayUIRoot : MonoBehaviour
         ClearContextSelection();
     }
 
+    private void OnContextInspectAction()
+    {
+        if (itemInspectPanel == null || !TryGetContextItem(out ItemDefinition item, out int quantity, out ItemRuntimeData runtimeData))
+            return;
+
+        itemInspectPanel.Show(item, quantity, runtimeData);
+
+        if (contextMenuPanel != null)
+            contextMenuPanel.gameObject.SetActive(false);
+
+        ClearContextSelection();
+    }
+
+    private void OnContextSplitAction()
+    {
+        if (contextMenuTargetsCarryPlacement)
+        {
+            GridContainerState container = GetActualContainerState(selectedCarryContainerKind);
+            GridItemPlacement placement = FindSelectedPlacement(
+                container,
+                selectedCarryRuntimeInstanceId,
+                selectedCarryRow,
+                selectedCarryColumn,
+                selectedCarryRotated,
+                selectedCarryItem);
+
+            if (ShowSplitDialog(container, placement))
+            {
+                contextMenuPanel.gameObject.SetActive(false);
+                ClearContextSelection();
+            }
+
+            return;
+        }
+
+        if (contextMenuTargetsPopupPlacement)
+        {
+            GridContainerState container = openedContainerRuntimeData != null ? openedContainerRuntimeData.StoredContainerState : null;
+            GridItemPlacement placement = FindSelectedPlacement(
+                container,
+                selectedPopupRuntimeInstanceId,
+                selectedPopupRow,
+                selectedPopupColumn,
+                selectedPopupRotated,
+                selectedPopupItem);
+
+            if (ShowSplitDialog(container, placement))
+            {
+                contextMenuPanel.gameObject.SetActive(false);
+                ClearContextSelection();
+            }
+        }
+    }
+
+    private bool TryGetContextItem(out ItemDefinition item, out int quantity, out ItemRuntimeData runtimeData)
+    {
+        item = null;
+        quantity = 1;
+        runtimeData = null;
+
+        if (contextMenuTargetsEquipmentSlot)
+        {
+            InventorySlot slot = equipment != null && selectedEquipmentSlotTypeIndex >= 0
+                ? equipment.GetSlot((EquipmentSlotType)selectedEquipmentSlotTypeIndex)
+                : null;
+            if (slot == null || slot.IsEmpty)
+                return false;
+
+            item = slot.Item;
+            quantity = slot.Quantity;
+            runtimeData = slot.RuntimeData;
+            return item != null;
+        }
+
+        if (contextMenuTargetsCorpseEquipmentSlot)
+        {
+            InventorySlot slot = openedCorpseLoot != null && selectedCorpseEquipmentSlotTypeIndex >= 0
+                ? openedCorpseLoot.GetSlot((EquipmentSlotType)selectedCorpseEquipmentSlotTypeIndex)
+                : null;
+            if (slot == null || slot.IsEmpty)
+                return false;
+
+            item = slot.Item;
+            quantity = slot.Quantity;
+            runtimeData = slot.RuntimeData;
+            return item != null;
+        }
+
+        if (contextMenuTargetsCarryPlacement)
+        {
+            GridContainerState container = GetActualContainerState(selectedCarryContainerKind);
+            GridItemPlacement placement = FindSelectedPlacement(
+                container,
+                selectedCarryRuntimeInstanceId,
+                selectedCarryRow,
+                selectedCarryColumn,
+                selectedCarryRotated,
+                selectedCarryItem);
+            if (placement == null || placement.IsEmpty)
+                return false;
+
+            item = placement.Item;
+            quantity = placement.Quantity;
+            runtimeData = placement.RuntimeData;
+            return item != null;
+        }
+
+        if (contextMenuTargetsPopupPlacement)
+        {
+            GridContainerState container = openedContainerRuntimeData != null ? openedContainerRuntimeData.StoredContainerState : null;
+            GridItemPlacement placement = FindSelectedPlacement(
+                container,
+                selectedPopupRuntimeInstanceId,
+                selectedPopupRow,
+                selectedPopupColumn,
+                selectedPopupRotated,
+                selectedPopupItem);
+            if (placement == null || placement.IsEmpty)
+                return false;
+
+            item = placement.Item;
+            quantity = placement.Quantity;
+            runtimeData = placement.RuntimeData;
+            return item != null;
+        }
+
+        InventorySlot backpackSlot = inventory != null ? inventory.GetSlot(selectedBackpackSlotIndex) : null;
+        if (backpackSlot == null || backpackSlot.IsEmpty)
+            return false;
+
+        item = backpackSlot.Item;
+        quantity = backpackSlot.Quantity;
+        runtimeData = backpackSlot.RuntimeData;
+        return item != null;
+    }
+
     private void OnContextDropAction()
     {
         if (contextMenuTargetsEquipmentSlot)
         {
             EquipmentSlotType slotType = (EquipmentSlotType)selectedEquipmentSlotTypeIndex;
+            InventorySlot equipmentDropSlot = equipment != null && selectedEquipmentSlotTypeIndex >= 0
+                ? equipment.GetSlot(slotType)
+                : null;
+            ItemRuntimeData equipmentDroppedRuntimeData = equipmentDropSlot != null ? equipmentDropSlot.RuntimeData : null;
             bool dropped = itemDrop != null
                 && selectedEquipmentSlotTypeIndex >= 0
                 && CanDropEquipmentSlot(slotType)
                 && itemDrop.TryDropFromEquipmentSlot(slotType);
+
+            contextMenuPanel.gameObject.SetActive(false);
+            ClearContextSelection();
+
+            if (dropped)
+            {
+                CloseContainerPopupIfDroppedItem(equipmentDroppedRuntimeData);
+                equipmentVisuals?.ForceRefreshNow();
+                RefreshAll();
+            }
+
+            return;
+        }
+
+        if (contextMenuTargetsCorpseEquipmentSlot)
+        {
+            bool dropped = selectedCorpseEquipmentSlotTypeIndex >= 0
+                && TryDropCorpseEquipmentSlot((EquipmentSlotType)selectedCorpseEquipmentSlotTypeIndex);
 
             contextMenuPanel.gameObject.SetActive(false);
             ClearContextSelection();
@@ -985,6 +1393,72 @@ public class GameplayUIRoot : MonoBehaviour
         selectedBackpackSlotIndex = -1;
     }
 
+    private bool ShowSplitDialog(GridContainerState container, GridItemPlacement placement)
+    {
+        if (splitDialogPanel == null || container == null || placement == null || placement.IsEmpty)
+            return false;
+
+        if (placement.Item == null || !placement.Item.canStack || placement.Quantity <= 1)
+            return false;
+
+        splitDialogContainer = container;
+        splitDialogRuntimeInstanceId = placement.RuntimeInstanceId;
+        splitDialogSourceRow = placement.Row;
+        splitDialogSourceColumn = placement.Column;
+        splitDialogSourceRotated = placement.Rotated;
+        splitDialogItem = placement.Item;
+        splitDialogMaxQuantity = Mathf.Max(1, placement.Quantity - 1);
+        splitDialogQuantity = 1;
+
+        if (splitDialogTitleText != null)
+            splitDialogTitleText.text = "Split " + placement.Item.displayName;
+
+        if (splitDialogItemIconImage != null)
+        {
+            splitDialogItemIconImage.sprite = placement.Item.GetGridInventorySpriteOrFallback();
+            splitDialogItemIconImage.enabled = splitDialogItemIconImage.sprite != null;
+        }
+
+        splitDialogPanel.SetAsLastSibling();
+        splitDialogPanel.gameObject.SetActive(true);
+        UpdateSplitDialogQuantity(1);
+        return true;
+    }
+
+    private void HideSplitDialog()
+    {
+        if (splitDialogPanel != null)
+            splitDialogPanel.gameObject.SetActive(false);
+
+        splitDialogContainer = null;
+        splitDialogRuntimeInstanceId = string.Empty;
+        splitDialogSourceRow = -1;
+        splitDialogSourceColumn = -1;
+        splitDialogSourceRotated = false;
+        splitDialogItem = null;
+        splitDialogMaxQuantity = 1;
+        splitDialogQuantity = 1;
+        splitDialogUpdating = false;
+    }
+
+    private void CloseInventoryForItemUse()
+    {
+        HideDropDialog();
+        HideSplitDialog();
+
+        if (contextMenuPanel != null)
+            contextMenuPanel.gameObject.SetActive(false);
+
+        if (containerPopupPanel != null)
+            containerPopupPanel.gameObject.SetActive(false);
+
+        if (inventoryPanel != null && inventoryPanel.gameObject.activeSelf)
+        {
+            inventoryPanel.gameObject.SetActive(false);
+            CloseExternalContainer();
+        }
+    }
+
     private void OpenContainerPopup(ItemDefinition item, ItemRuntimeData runtimeData, Vector2 screenPoint)
     {
         if (containerPopupPanel == null || containerPopupView == null || runtimeData == null || runtimeData.StoredContainerState == null)
@@ -995,6 +1469,113 @@ public class GameplayUIRoot : MonoBehaviour
         RefreshContainerPopup();
         PositionPanelAtScreenPoint(containerPopupPanel, screenPoint);
         containerPopupPanel.gameObject.SetActive(true);
+    }
+
+    private bool TryHandleCorpseEquipmentEquip(EquipmentSlotType sourceSlotType)
+    {
+        if (openedCorpseLoot == null || equipment == null)
+            return false;
+
+        InventorySlot sourceSlot = openedCorpseLoot.GetSlot(sourceSlotType);
+        if (sourceSlot == null || sourceSlot.IsEmpty || sourceSlot.Item == null)
+            return false;
+
+        if (!TryGetPreferredEquipmentSlot(sourceSlot.Item, out EquipmentSlotType targetSlotType))
+            return false;
+
+        InventorySlot targetSlot = equipment.GetSlot(targetSlotType);
+        if (targetSlot == null || !equipment.CanEquip(targetSlotType, sourceSlot.Item))
+            return false;
+
+        ItemDefinition item = sourceSlot.Item;
+        int quantity = sourceSlot.Quantity;
+        ItemRuntimeData runtimeData = sourceSlot.GetRuntimeDataForTransfer(quantity);
+        ItemDefinition previousItem = targetSlot.Item;
+        int previousQuantity = targetSlot.Quantity;
+        ItemRuntimeData previousRuntimeData = targetSlot.GetRuntimeDataForTransfer(previousQuantity);
+
+        sourceSlot.Clear();
+
+        if (previousItem != null && previousQuantity > 0)
+        {
+            if (openedCorpseLoot.PocketContainer == null
+                || !openedCorpseLoot.PocketContainer.TryPlaceNewItem(previousItem, previousQuantity, previousRuntimeData, out _))
+            {
+                sourceSlot.TrySet(item, quantity, runtimeData);
+                return false;
+            }
+        }
+
+        targetSlot.Clear();
+        if (targetSlot.TrySet(item, quantity, runtimeData))
+        {
+            CloseContainerPopupIfEquippedItem(item, runtimeData);
+            return true;
+        }
+
+        targetSlot.TrySet(previousItem, previousQuantity, previousRuntimeData);
+        sourceSlot.TrySet(item, quantity, runtimeData);
+        return false;
+    }
+
+    private bool TryDropCorpseEquipmentSlot(EquipmentSlotType slotType)
+    {
+        if (openedCorpseLoot == null)
+            return false;
+
+        InventorySlot sourceSlot = openedCorpseLoot.GetSlot(slotType);
+        if (sourceSlot == null || sourceSlot.IsEmpty || sourceSlot.Item == null)
+            return false;
+
+        ItemDefinition item = sourceSlot.Item;
+        int quantity = sourceSlot.Quantity;
+        ItemRuntimeData runtimeData = sourceSlot.GetRuntimeDataForTransfer(quantity);
+        sourceSlot.Clear();
+
+        WorldItemPickup droppedPickup = itemDrop != null
+            ? itemDrop.SpawnWorldPickup(item, quantity, runtimeData)
+            : WorldItemPickup.Spawn(
+                item,
+                quantity,
+                runtimeData,
+                transform.TransformPoint(new Vector3(0f, 0.75f, 1.1f)),
+                transform.rotation);
+
+        if (droppedPickup != null)
+        {
+            CloseContainerPopupIfDroppedItem(runtimeData);
+            return true;
+        }
+
+        sourceSlot.TrySet(item, quantity, runtimeData);
+        return false;
+    }
+
+    private bool TryGetPreferredEquipmentSlot(ItemDefinition item, out EquipmentSlotType slotType)
+    {
+        slotType = EquipmentSlotType.PrimaryWeapon;
+
+        if (item is WeaponItemDefinition weapon)
+        {
+            slotType = weapon.weaponCategory == WeaponCategory.Pistol
+                ? EquipmentSlotType.SecondaryWeapon
+                : EquipmentSlotType.PrimaryWeapon;
+            return true;
+        }
+
+        if (item is ArmorItemDefinition armor)
+        {
+            slotType = GetArmorEquipmentSlot(armor.armorSlot);
+            return true;
+        }
+
+        if (item is ContainerItemDefinition containerItem)
+        {
+            slotType = GetContainerEquipmentSlot(containerItem.containerKind);
+            return true;
+        }
+
+        return false;
     }
 
     private void CloseContainerPopup()
@@ -1116,6 +1697,104 @@ public class GameplayUIRoot : MonoBehaviour
         dropDialogQuantityText.text = dropDialogQuantity + " / " + maxQuantity;
     }
 
+    private void OnSplitMinus()
+    {
+        UpdateSplitDialogQuantity(splitDialogQuantity - 1);
+    }
+
+    private void OnSplitPlus()
+    {
+        UpdateSplitDialogQuantity(splitDialogQuantity + 1);
+    }
+
+    private void OnSplitSliderChanged(float value)
+    {
+        if (splitDialogUpdating)
+            return;
+
+        UpdateSplitDialogQuantity(Mathf.RoundToInt(value));
+    }
+
+    private void OnSplitInputEndEdit(string value)
+    {
+        if (splitDialogUpdating)
+            return;
+
+        if (!int.TryParse(value, out int parsed))
+            parsed = splitDialogQuantity;
+
+        UpdateSplitDialogQuantity(parsed);
+    }
+
+    private void OnSplitConfirm()
+    {
+        GridItemPlacement placement = FindSelectedPlacement(
+            splitDialogContainer,
+            splitDialogRuntimeInstanceId,
+            splitDialogSourceRow,
+            splitDialogSourceColumn,
+            splitDialogSourceRotated,
+            splitDialogItem);
+
+        if (placement == null || placement.IsEmpty || placement.Item == null || !placement.Item.canStack || placement.Quantity <= 1)
+        {
+            HideSplitDialog();
+            RefreshAll();
+            return;
+        }
+
+        int quantityToSplit = Mathf.Clamp(splitDialogQuantity, 1, placement.Quantity - 1);
+        int removedQuantity = placement.Remove(quantityToSplit);
+        if (removedQuantity <= 0)
+        {
+            HideSplitDialog();
+            RefreshAll();
+            return;
+        }
+
+        bool placed = splitDialogContainer != null
+            && splitDialogContainer.TryPlaceNewItemNear(
+                placement.Item,
+                removedQuantity,
+                placement.Row,
+                placement.Column + placement.ColumnSpan,
+                null,
+                out _,
+                placement.Rotated);
+
+        if (!placed)
+            placement.Add(placement.Item, removedQuantity);
+
+        HideSplitDialog();
+        RefreshAll();
+    }
+
+    private void OnSplitCancel()
+    {
+        HideSplitDialog();
+    }
+
+    private void UpdateSplitDialogQuantity(int requestedQuantity)
+    {
+        splitDialogQuantity = Mathf.Clamp(requestedQuantity, 1, Mathf.Max(1, splitDialogMaxQuantity));
+        splitDialogUpdating = true;
+
+        if (splitQuantitySlider != null)
+        {
+            splitQuantitySlider.minValue = 1f;
+            splitQuantitySlider.maxValue = Mathf.Max(1, splitDialogMaxQuantity);
+            splitQuantitySlider.value = splitDialogQuantity;
+        }
+
+        if (splitQuantityInput != null)
+            splitQuantityInput.text = splitDialogQuantity.ToString();
+
+        if (splitDialogMaxText != null)
+            splitDialogMaxText.text = "1 / " + splitDialogMaxQuantity;
+
+        splitDialogUpdating = false;
+    }
+
     private bool TryHandleCarryPlacementEquip()
     {
         if (equipment == null || gridInventory == null)
@@ -1162,6 +1841,14 @@ public class GameplayUIRoot : MonoBehaviour
 
         if (previousItem != null && previousQuantity > 0)
         {
+            if (previousRuntime != null
+                && previousRuntime.StoredContainerState != null
+                && ReferenceEquals(previousRuntime.StoredContainerState, container))
+            {
+                container.TryPlaceItemAt(item, quantity, row, column, runtimeData, out _, rotated);
+                return false;
+            }
+
             if (!container.TryPlaceNewItem(previousItem, previousQuantity, previousRuntime, out _))
             {
                 container.TryPlaceItemAt(item, quantity, row, column, runtimeData, out _, rotated);
@@ -1183,7 +1870,9 @@ public class GameplayUIRoot : MonoBehaviour
 
     private bool TryDropCarryPlacement()
     {
-        if (gridInventory == null && selectedCarryContainerKind != GridContainerKind.External)
+        if (gridInventory == null
+            && selectedCarryContainerKind != GridContainerKind.External
+            && selectedCarryContainerKind != GridContainerKind.CorpsePocket)
             return false;
 
         GridContainerState container = GetActualContainerState(selectedCarryContainerKind);
@@ -1269,6 +1958,14 @@ public class GameplayUIRoot : MonoBehaviour
 
         if (previousItem != null && previousQuantity > 0)
         {
+            if (previousRuntime != null
+                && previousRuntime.StoredContainerState != null
+                && ReferenceEquals(previousRuntime.StoredContainerState, container))
+            {
+                container.TryPlaceItemAt(item, quantity, row, column, runtimeData, out _, rotated);
+                return false;
+            }
+
             if (!container.TryPlaceNewItem(previousItem, previousQuantity, previousRuntime, out _))
             {
                 container.TryPlaceItemAt(item, quantity, row, column, runtimeData, out _, rotated);
@@ -1418,6 +2115,11 @@ public class GameplayUIRoot : MonoBehaviour
         return slotType != EquipmentSlotType.Backpack;
     }
 
+    private static bool CanDragEquipmentSlot(EquipmentSlotType slotType)
+    {
+        return CanUnequipEquipmentSlot(slotType) || slotType == EquipmentSlotType.Backpack;
+    }
+
     private static bool CanDropEquipmentSlot(EquipmentSlotType slotType)
     {
         return slotType == EquipmentSlotType.PrimaryWeapon
@@ -1451,10 +2153,21 @@ public class GameplayUIRoot : MonoBehaviour
         if (externalContainerView == null || rightWorkspaceTitleText == null || rightWorkspaceHintText == null)
             return;
 
+        if (openedCorpseLoot != null)
+        {
+            RefreshCorpseLootDisplay();
+            return;
+        }
+
+        if (corpseLootPanel != null)
+            corpseLootPanel.gameObject.SetActive(false);
+
         if (openedSearchableContainer == null)
         {
+            ApplyRightWorkspaceMode(false);
             rightWorkspaceTitleText.text = "Reserved";
             rightWorkspaceHintText.text = "Future loot container / shelter stash area.";
+            SetRightWorkspaceCashVisible(false);
             externalContainerView.rect.gameObject.SetActive(false);
             ClearGridPlacementViews(externalContainerView);
             return;
@@ -1464,15 +2177,24 @@ public class GameplayUIRoot : MonoBehaviour
         GridContainerState containerState = openedSearchableContainer.ContainerState;
         if (containerState == null)
         {
+            ApplyRightWorkspaceMode(false);
             rightWorkspaceTitleText.text = "Reserved";
             rightWorkspaceHintText.text = "Future loot container / shelter stash area.";
+            SetRightWorkspaceCashVisible(false);
             externalContainerView.rect.gameObject.SetActive(false);
             ClearGridPlacementViews(externalContainerView);
             return;
         }
 
+        bool isShelterStash = IsShelterStash(openedSearchableContainer);
+        ApplyRightWorkspaceMode(isShelterStash);
         rightWorkspaceTitleText.text = openedSearchableContainer.DisplayName;
-        rightWorkspaceHintText.text = "Drag items into your carry containers.";
+        rightWorkspaceHintText.text = isShelterStash
+            ? "Drag items between stash and carry containers."
+            : "Drag items into your carry containers.";
+        SetRightWorkspaceCashVisible(isShelterStash);
+        if (isShelterStash && rightWorkspaceCashText != null)
+            rightWorkspaceCashText.text = FormatStashCash(CalculateCurrencyValue(containerState));
 
         int rows = Mathf.Max(1, containerState.RowCount);
         int columns = Mathf.Max(1, containerState.ColumnCount);
@@ -1482,10 +2204,15 @@ public class GameplayUIRoot : MonoBehaviour
         externalContainerView.kind = GridContainerKind.External;
         externalContainerView.rect.gameObject.SetActive(true);
         externalContainerView.rect.sizeDelta = new Vector2(Mathf.Max(260f, gridWidth + 24f), Mathf.Max(180f, gridHeight + 40f));
+        if (isShelterStash)
+        {
+            externalContainerView.rect.offsetMin = new Vector2(20f, 20f);
+            externalContainerView.rect.offsetMax = new Vector2(-20f, -112f);
+        }
         externalContainerView.gridFrameRect.sizeDelta = new Vector2(
             gridWidth + (InventoryGridOuterBorderThickness * 2f),
             gridHeight + (InventoryGridOuterBorderThickness * 2f));
-        externalContainerView.gridFrameRect.anchoredPosition = GetExternalContainerFrameOffset(openedSearchableContainer);
+        ApplyExternalContainerFrameLayout(isShelterStash, openedSearchableContainer);
         externalContainerView.gridFrameImage.sprite = GetOrCreateGridFrameSprite(rows, columns);
         externalContainerView.gridRect.sizeDelta = new Vector2(gridWidth, gridHeight);
         externalContainerView.gridLayout.constraintCount = columns;
@@ -1505,6 +2232,138 @@ public class GameplayUIRoot : MonoBehaviour
         }
     }
 
+    private void RefreshCorpseLootDisplay()
+    {
+        if (openedCorpseLoot == null || corpseLootPanel == null || corpsePocketView == null)
+            return;
+
+        openedCorpseLoot.EnsureInitialized();
+        ApplyRightWorkspaceMode(false);
+        rightWorkspaceTitleText.text = openedCorpseLoot.EnemyTypeDisplayName;
+        rightWorkspaceHintText.text = "Search corpse equipment and pockets.";
+        SetRightWorkspaceCashVisible(false);
+
+        if (externalContainerView != null)
+        {
+            externalContainerView.rect.gameObject.SetActive(false);
+            ClearGridPlacementViews(externalContainerView);
+        }
+
+        corpseLootPanel.gameObject.SetActive(true);
+        RefreshCorpseEquipmentSlotsDisplay();
+        RefreshCorpsePocketDisplay();
+    }
+
+    private void RefreshCorpseEquipmentSlotsDisplay()
+    {
+        foreach (KeyValuePair<EquipmentSlotType, SlotView> pair in corpseEquipmentSlotViews)
+        {
+            SlotView slotView = pair.Value;
+            InventorySlot slot = openedCorpseLoot != null ? openedCorpseLoot.GetSlot(pair.Key) : null;
+            bool useInlineName = UseInlineEquipmentName(pair.Key);
+            Sprite placeholderIcon = GetEquipmentPlaceholderIcon(pair.Key);
+
+            if (slot == null || slot.IsEmpty)
+            {
+                slotView.keyText.text = placeholderIcon != null ? string.Empty : (useInlineName ? string.Empty : GetEquipmentSlotLabel(pair.Key));
+                slotView.itemText.text = placeholderIcon != null ? string.Empty : (useInlineName ? string.Empty : GetEquipmentSlotPlaceholder(pair.Key));
+                slotView.quantityText.text = string.Empty;
+                slotView.background.color = GetEquipmentSlotEmptyColor(pair.Key);
+                slotView.itemText.color = new Color(0.70f, 0.74f, 0.79f, 0.72f);
+                if (slotView.detailText != null)
+                    slotView.detailText.text = string.Empty;
+                if (placeholderIcon != null)
+                    ApplyEquipmentSlotPlaceholderPresentation(slotView, pair.Key);
+                else
+                    ApplyEquipmentSlotIconPresentation(slotView, pair.Key, null);
+                SetSlotIconPreserveAspect(slotView, false);
+                SetSlotIconTint(slotView, new Color(1f, 1f, 1f, 0.12f));
+                SetSlotIcon(slotView, placeholderIcon);
+                continue;
+            }
+
+            slotView.keyText.text = useInlineName ? string.Empty : GetEquipmentSlotLabel(pair.Key);
+            slotView.itemText.text = Shorten(slot.Item.displayName, pair.Key == EquipmentSlotType.PrimaryWeapon ? 20 : 16);
+            slotView.quantityText.text = slot.Quantity > 1 ? slot.Quantity.ToString() : string.Empty;
+            slotView.background.color = GetEquipmentSlotFilledColor(pair.Key, slot.Item);
+            slotView.itemText.color = Color.white;
+            if (slotView.detailText != null)
+                slotView.detailText.text = string.Empty;
+            ApplyEquipmentSlotIconPresentation(slotView, pair.Key, slot.Item);
+            SetSlotIconPreserveAspect(slotView, true);
+            SetSlotIconTint(slotView, Color.white);
+            SetSlotIcon(slotView, GetEquipmentDisplayIcon(slot.Item));
+        }
+    }
+
+    private void RefreshCorpsePocketDisplay()
+    {
+        GridContainerState pocket = openedCorpseLoot != null ? openedCorpseLoot.PocketContainer : null;
+        if (pocket == null)
+        {
+            ClearGridPlacementViews(corpsePocketView);
+            return;
+        }
+
+        int rows = Mathf.Max(1, pocket.RowCount);
+        int columns = Mathf.Max(1, pocket.ColumnCount);
+        float gridWidth = columns * InventoryGridCellSize;
+        float gridHeight = rows * InventoryGridCellSize;
+
+        corpsePocketView.kind = GridContainerKind.CorpsePocket;
+        corpsePocketView.gridFrameRect.sizeDelta = new Vector2(
+            gridWidth + (InventoryGridOuterBorderThickness * 2f),
+            gridHeight + (InventoryGridOuterBorderThickness * 2f));
+        corpsePocketView.gridFrameImage.sprite = GetOrCreateGridFrameSprite(rows, columns);
+        corpsePocketView.gridRect.sizeDelta = new Vector2(gridWidth, gridHeight);
+        corpsePocketView.gridLayout.constraintCount = columns;
+        HideGridCellVisuals(corpsePocketView);
+        corpsePocketView.placementsRoot.SetAsLastSibling();
+
+        ClearGridPlacementViews(corpsePocketView);
+        IReadOnlyList<GridItemPlacement> placements = pocket.Placements;
+        for (int i = 0; i < placements.Count; i++)
+        {
+            GridItemPlacement placement = placements[i];
+            if (placement == null || placement.IsEmpty)
+                continue;
+
+            GridPlacementView placementView = CreateGridPlacementView(GridContainerKind.CorpsePocket, corpsePocketView.placementsRoot, placement, -1);
+            corpsePocketView.placementViews.Add(placementView);
+        }
+    }
+
+    private void ApplyRightWorkspaceMode(bool isShelterStash)
+    {
+        if (rightWorkspacePanel == null)
+            return;
+
+        rightWorkspacePanel.anchorMin = new Vector2(isShelterStash ? 0.62f : 0.637f, 0f);
+        rightWorkspacePanel.anchorMax = new Vector2(1f, 1f);
+        rightWorkspacePanel.offsetMin = new Vector2(6f, 24f);
+        rightWorkspacePanel.offsetMax = new Vector2(-24f, -88f);
+    }
+
+    private void ApplyExternalContainerFrameLayout(bool isShelterStash, SearchableContainer container)
+    {
+        if (externalContainerView?.gridFrameRect == null)
+            return;
+
+        if (isShelterStash)
+        {
+            externalContainerView.gridFrameRect.anchorMin = new Vector2(0f, 1f);
+            externalContainerView.gridFrameRect.anchorMax = new Vector2(0f, 1f);
+            externalContainerView.gridFrameRect.pivot = new Vector2(0f, 1f);
+            externalContainerView.gridFrameRect.anchoredPosition = new Vector2(20f, -76f);
+            return;
+        }
+
+        externalContainerView.gridFrameRect.anchorMin = new Vector2(0.5f, 0.42f);
+        externalContainerView.gridFrameRect.anchorMax = new Vector2(0.5f, 0.42f);
+        externalContainerView.gridFrameRect.pivot = new Vector2(0.5f, 0.5f);
+        externalContainerView.gridFrameRect.anchoredPosition = GetExternalContainerFrameOffset(container);
+    }
+
     private Vector2 GetExternalContainerFrameOffset(SearchableContainer container)
     {
         if (container == null)
@@ -1517,7 +2376,55 @@ public class GameplayUIRoot : MonoBehaviour
         if (displayName.Equals("Large Supply Crate", StringComparison.OrdinalIgnoreCase))
             return new Vector2(-260f, -96f);
 
+        if (IsShelterStash(container))
+            return new Vector2(0f, -32f);
+
         return new Vector2(-220f, 0f);
+    }
+
+    private bool IsShelterStash(SearchableContainer container)
+    {
+        return container != null && container.GetComponent("ShelterStashStation") != null;
+    }
+
+    private void SetRightWorkspaceCashVisible(bool visible)
+    {
+        if (rightWorkspaceCashText != null)
+            rightWorkspaceCashText.gameObject.SetActive(visible);
+    }
+
+    private float CalculateCurrencyValue(GridContainerState containerState)
+    {
+        if (containerState == null)
+            return 0f;
+
+        float totalValue = 0f;
+        IReadOnlyList<GridItemPlacement> placements = containerState.Placements;
+        for (int i = 0; i < placements.Count; i++)
+        {
+            GridItemPlacement placement = placements[i];
+            if (placement == null || placement.IsEmpty)
+                continue;
+
+            if (placement.Item != null && placement.Item.Type == ItemType.Currency)
+                totalValue += placement.Item.GetTotalMoneyValue(placement.Quantity);
+
+            GridContainerState nestedContainer = placement.RuntimeData != null
+                ? placement.RuntimeData.StoredContainerState
+                : null;
+            if (nestedContainer != null)
+                totalValue += CalculateCurrencyValue(nestedContainer);
+        }
+
+        return totalValue;
+    }
+
+    private static string FormatStashCash(float value)
+    {
+        if (value >= 1000f)
+            return "$ " + (value / 1000f).ToString("0.#") + "k";
+
+        return "$ " + Mathf.RoundToInt(value).ToString();
     }
 
     private void RefreshQuickbarDisplay()
@@ -1539,7 +2446,7 @@ public class GameplayUIRoot : MonoBehaviour
                 continue;
             }
 
-            int availableQuantity = inventory != null ? inventory.GetQuantity(assignedItem) : 0;
+            int availableQuantity = GetCarriedItemQuantity(assignedItem);
             slotView.itemText.text = Shorten(assignedItem.displayName, 12);
             slotView.quantityText.text = availableQuantity > 0 ? availableQuantity.ToString() : "0";
             slotView.background.color = availableQuantity > 0
@@ -1689,7 +2596,9 @@ public class GameplayUIRoot : MonoBehaviour
         if (currentDefinition.usesAmmo && currentDefinition.compatibleAmmo != null)
         {
             ammoLabel = currentDefinition.compatibleAmmo.displayName;
-            reserveAmmo = inventory != null ? inventory.GetQuantity(currentDefinition.compatibleAmmo) : 0;
+            reserveAmmo = weaponSelection != null
+                ? weaponSelection.GetReserveAmmoFor(currentDefinition)
+                : GetCarriedItemQuantity(currentDefinition.compatibleAmmo);
         }
 
         weaponHudNameText.text = currentDefinition.displayName;
@@ -1706,6 +2615,62 @@ public class GameplayUIRoot : MonoBehaviour
 
         if (weaponHudIconFrame != null)
             weaponHudIconFrame.color = GetWeaponHudAccentColor(currentDefinition.weaponCategory);
+    }
+
+    private void RefreshUseProgressUi()
+    {
+        if (useProgressPanel == null)
+            return;
+
+        bool isUsing = itemUse != null && itemUse.IsUsing;
+        if (useProgressPanel.gameObject.activeSelf != isUsing)
+            useProgressPanel.gameObject.SetActive(isUsing);
+
+        if (!isUsing)
+            return;
+
+        useProgressPanel.SetAsLastSibling();
+
+        ItemDefinition activeItem = itemUse.ActiveItem;
+        if (useProgressRingImage != null)
+            useProgressRingImage.fillAmount = itemUse.UseRemainingNormalized;
+
+        if (useProgressCountdownText != null)
+            useProgressCountdownText.text = Mathf.CeilToInt(itemUse.UseRemainingSeconds).ToString();
+
+        if (useProgressItemIconImage != null)
+        {
+            Sprite icon = itemUse.ActiveUseIcon;
+            useProgressItemIconImage.sprite = icon;
+            useProgressItemIconImage.enabled = icon != null;
+            useProgressItemIconImage.rectTransform.sizeDelta = GetUseProgressIconSize(activeItem);
+        }
+
+        if (useProgressItemNameText != null)
+            useProgressItemNameText.text = itemUse.ActiveUseDisplayName;
+    }
+
+    private Vector2 GetUseProgressIconSize(ItemDefinition item)
+    {
+        if (item != null && item.itemId == "consumable_food")
+            return new Vector2(76f, 76f);
+
+        return new Vector2(104f, 104f);
+    }
+
+    private int GetCarriedItemQuantity(ItemDefinition item)
+    {
+        if (item == null)
+            return 0;
+
+        int totalQuantity = 0;
+        if (gridInventory != null)
+            totalQuantity += gridInventory.GetQuantity(item);
+
+        if (inventory != null)
+            totalQuantity += inventory.GetQuantity(item);
+
+        return totalQuantity;
     }
 
     private void RefreshStatusHud()
@@ -1761,10 +2726,10 @@ public class GameplayUIRoot : MonoBehaviour
             maxHealth = playerStats.maxHealth;
         }
 
-        float hydration = 100f;
-        float hydrationMax = 100f;
-        float hunger = 100f;
-        float hungerMax = 100f;
+        float hydration = playerStats != null ? playerStats.currentHydration : 100f;
+        float hydrationMax = playerStats != null ? playerStats.maxHydration : 100f;
+        float hunger = playerStats != null ? playerStats.currentHunger : 100f;
+        float hungerMax = playerStats != null ? playerStats.maxHunger : 100f;
         float currentWeight = GetCurrentCarryWeight();
         float weightMax = 50f;
 
@@ -1813,10 +2778,10 @@ public class GameplayUIRoot : MonoBehaviour
             equipmentHealthValueText.text = Mathf.CeilToInt(currentHealth) + "/" + Mathf.CeilToInt(maxHealth);
 
         if (hydrationValueText != null)
-            hydrationValueText.text = Mathf.CeilToInt(hydration) + "/" + Mathf.CeilToInt(hydrationMax);
+            hydrationValueText.text = hydration.ToString("0.0") + "/" + hydrationMax.ToString("0");
 
         if (hungerValueText != null)
-            hungerValueText.text = Mathf.CeilToInt(hunger) + "/" + Mathf.CeilToInt(hungerMax);
+            hungerValueText.text = hunger.ToString("0.0") + "/" + hungerMax.ToString("0");
 
         if (weightValueText != null)
             weightValueText.text = currentWeight.ToString("0.0") + "/" + weightMax.ToString("0");
@@ -1826,20 +2791,22 @@ public class GameplayUIRoot : MonoBehaviour
     {
         bool inventoryOpen = inventoryPanel != null && inventoryPanel.gameObject.activeSelf;
         bool mapOpen = fullMapPanel != null && fullMapPanel.gameObject.activeSelf;
+        bool useInProgress = itemUse != null && itemUse.IsUsing;
         bool isBlockingOverlayOpen = inventoryOpen || mapOpen;
+        bool shouldBlockMovement = isBlockingOverlayOpen || useInProgress;
 
         if (juCharacter != null)
         {
-            if (isBlockingOverlayOpen && !overlayWasBlockingMovement)
+            if (shouldBlockMovement && !overlayWasBlockingMovement)
                 juCharacter.DisableLocomotion();
-            else if (!isBlockingOverlayOpen && overlayWasBlockingMovement)
+            else if (!shouldBlockMovement && overlayWasBlockingMovement)
                 juCharacter.enableMove();
         }
 
         if (juInteractionSystem != null)
-            juInteractionSystem.BlockInteractions = isBlockingOverlayOpen;
+            juInteractionSystem.BlockInteractions = shouldBlockMovement;
 
-        if (playerRigidbody != null && isBlockingOverlayOpen)
+        if (playerRigidbody != null && shouldBlockMovement)
         {
             Vector3 velocity = playerRigidbody.linearVelocity;
             velocity.x = 0f;
@@ -1887,9 +2854,10 @@ public class GameplayUIRoot : MonoBehaviour
         RefreshStatusHud();
         RefreshEquipmentNeedBars();
         RefreshWeaponHud();
+        RefreshUseProgressUi();
         if (inventoryCharacterPreview != null)
             inventoryCharacterPreview.SetPreviewActive(inventoryPanel != null && inventoryPanel.gameObject.activeSelf);
-        overlayWasBlockingMovement = isBlockingOverlayOpen;
+        overlayWasBlockingMovement = shouldBlockMovement;
     }
 
     private void InitializeOperatorPreview()
@@ -1913,6 +2881,8 @@ public class GameplayUIRoot : MonoBehaviour
         bool mapOpen = fullMapPanel != null && fullMapPanel.gameObject.activeSelf;
         return inventoryOpen || mapOpen;
     }
+
+    public bool IsGameplayOverlayOpen => IsBlockingOverlayOpen();
 
     private void UpdateGameplayHudVisibility(bool inventoryOpen, bool mapOpen)
     {
@@ -1961,8 +2931,19 @@ public class GameplayUIRoot : MonoBehaviour
         if (contextMenuPanel != null)
             contextMenuPanel.gameObject.SetActive(false);
 
+        if (containerPopupPanel != null)
+            containerPopupPanel.gameObject.SetActive(false);
+
         if (dropDialogPanel != null)
             dropDialogPanel.gameObject.SetActive(false);
+
+        if (splitDialogPanel != null)
+            splitDialogPanel.gameObject.SetActive(false);
+
+        if (useProgressPanel != null)
+            useProgressPanel.gameObject.SetActive(false);
+
+        itemInspectPanel?.Hide();
 
         if (minimapPanel != null)
             minimapPanel.gameObject.SetActive(showMinimap);
@@ -1991,6 +2972,9 @@ public class GameplayUIRoot : MonoBehaviour
         BuildContextMenu();
         BuildContainerPopup();
         BuildDropDialog();
+        BuildSplitDialog();
+        BuildUseProgressPanel();
+        itemInspectPanel = ItemInspectPanel.Create(runtimeRoot, rootCanvas, uiFont);
 
         uiBuilt = true;
         InitializeOperatorPreview();
@@ -2044,7 +3028,24 @@ public class GameplayUIRoot : MonoBehaviour
             new Vector2(340f, 54f),
             FontStyle.Normal);
         rightWorkspaceHintText.color = new Color(0.72f, 0.77f, 0.84f, 0.74f);
+        rightWorkspaceCashText = CreateText(
+            "RightWorkspaceCash",
+            rightWorkspace,
+            "$ 0",
+            22,
+            TextAnchor.MiddleRight,
+            new Vector2(-20f, -18f),
+            new Vector2(160f, 34f),
+            FontStyle.Bold);
+        RectTransform cashRect = rightWorkspaceCashText.rectTransform;
+        cashRect.anchorMin = new Vector2(1f, 1f);
+        cashRect.anchorMax = new Vector2(1f, 1f);
+        cashRect.pivot = new Vector2(1f, 1f);
+        rightWorkspaceCashText.color = new Color(0.96f, 0.96f, 0.92f, 1f);
+        rightWorkspaceCashText.horizontalOverflow = HorizontalWrapMode.Overflow;
+        rightWorkspaceCashText.gameObject.SetActive(false);
         BuildExternalContainerView(rightWorkspace);
+        BuildCorpseLootView(rightWorkspace);
 
         RectTransform equipmentPanel = CreatePanel(
             "EquipmentPanel",
@@ -2193,6 +3194,98 @@ public class GameplayUIRoot : MonoBehaviour
         externalContainerView.placementsRoot.SetAsLastSibling();
 
         externalContainerView.rect.gameObject.SetActive(false);
+    }
+
+    private void BuildCorpseLootView(RectTransform parent)
+    {
+        corpseLootPanel = CreateRect(
+            "CorpseLootSection",
+            parent,
+            new Vector2(0f, 0f),
+            new Vector2(1f, 1f),
+            new Vector2(0f, 0f),
+            Vector2.zero);
+        corpseLootPanel.offsetMin = new Vector2(20f, 20f);
+        corpseLootPanel.offsetMax = new Vector2(-20f, -92f);
+
+        corpseEquipmentSlotViews.Clear();
+        CreateCorpseEquipmentSlot(corpseLootPanel, EquipmentSlotType.HeadArmor, new Vector2(0f, -76f), new Vector2(126f, 126f));
+        CreateCorpseEquipmentSlot(corpseLootPanel, EquipmentSlotType.ChestArmor, new Vector2(0f, -220f), new Vector2(126f, 126f));
+        CreateCorpseEquipmentSlot(corpseLootPanel, EquipmentSlotType.Backpack, new Vector2(142f, -76f), new Vector2(126f, 126f));
+        CreateCorpseEquipmentSlot(corpseLootPanel, EquipmentSlotType.SecondaryWeapon, new Vector2(0f, -374f), new Vector2(190f, 106f));
+        CreateCorpseEquipmentSlot(corpseLootPanel, EquipmentSlotType.PrimaryWeapon, new Vector2(0f, -498f), new Vector2(344f, 116f));
+
+        CreateText(
+            "CorpsePocketTitle",
+            corpseLootPanel,
+            "POCKET",
+            15,
+            TextAnchor.UpperLeft,
+            new Vector2(0f, -638f),
+            new Vector2(120f, 22f),
+            FontStyle.Bold);
+
+        corpsePocketView = new GridContainerView
+        {
+            kind = GridContainerKind.CorpsePocket
+        };
+
+        corpsePocketView.gridFrameRect = CreateRect(
+            "CorpsePocketGridFrame",
+            corpseLootPanel,
+            new Vector2(0f, 1f),
+            new Vector2(0f, 1f),
+            new Vector2(0f, 1f),
+            new Vector2((4f * InventoryGridCellSize) + (InventoryGridOuterBorderThickness * 2f), InventoryGridCellSize + (InventoryGridOuterBorderThickness * 2f)));
+        corpsePocketView.gridFrameRect.anchoredPosition = new Vector2(0f, -672f);
+        corpsePocketView.gridFrameImage = corpsePocketView.gridFrameRect.gameObject.AddComponent<Image>();
+        corpsePocketView.gridFrameImage.type = Image.Type.Simple;
+        corpsePocketView.gridFrameImage.color = GridFrameDefaultColor;
+        corpsePocketView.gridFrameImage.sprite = GetOrCreateGridFrameSprite(1, 4);
+
+        corpsePocketView.gridRect = CreateRect(
+            "Grid",
+            corpsePocketView.gridFrameRect,
+            new Vector2(0f, 1f),
+            new Vector2(0f, 1f),
+            new Vector2(0f, 1f),
+            new Vector2(4f * InventoryGridCellSize, InventoryGridCellSize));
+        corpsePocketView.gridRect.anchoredPosition = new Vector2(InventoryGridOuterBorderThickness, -InventoryGridOuterBorderThickness);
+
+        corpsePocketView.gridLayout = corpsePocketView.gridRect.gameObject.AddComponent<GridLayoutGroup>();
+        corpsePocketView.gridLayout.cellSize = new Vector2(InventoryGridCellSize, InventoryGridCellSize);
+        corpsePocketView.gridLayout.spacing = Vector2.zero;
+        corpsePocketView.gridLayout.startCorner = GridLayoutGroup.Corner.UpperLeft;
+        corpsePocketView.gridLayout.startAxis = GridLayoutGroup.Axis.Horizontal;
+        corpsePocketView.gridLayout.childAlignment = TextAnchor.UpperLeft;
+        corpsePocketView.gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        corpsePocketView.gridLayout.constraintCount = 4;
+        corpsePocketView.gridLayout.padding = new RectOffset(0, 0, 0, 0);
+
+        corpsePocketView.gridLinesRoot = CreateRect(
+            "GridLines",
+            corpsePocketView.gridRect,
+            Vector2.zero,
+            Vector2.one,
+            new Vector2(0.5f, 0.5f),
+            Vector2.zero);
+        StretchToParent(corpsePocketView.gridLinesRoot, Vector2.zero, Vector2.zero);
+        LayoutElement linesLayout = corpsePocketView.gridLinesRoot.gameObject.AddComponent<LayoutElement>();
+        linesLayout.ignoreLayout = true;
+
+        corpsePocketView.placementsRoot = CreateRect(
+            "Placements",
+            corpsePocketView.gridRect,
+            Vector2.zero,
+            Vector2.one,
+            new Vector2(0.5f, 0.5f),
+            Vector2.zero);
+        StretchToParent(corpsePocketView.placementsRoot, Vector2.zero, Vector2.zero);
+        LayoutElement placementsLayout = corpsePocketView.placementsRoot.gameObject.AddComponent<LayoutElement>();
+        placementsLayout.ignoreLayout = true;
+        corpsePocketView.placementsRoot.SetAsLastSibling();
+
+        corpseLootPanel.gameObject.SetActive(false);
     }
 
     private void BuildQuickbarPanel()
@@ -2792,6 +3885,8 @@ public class GameplayUIRoot : MonoBehaviour
     {
         float width = (placement.ColumnSpan * InventoryGridCellSize) - (InventoryPlacementInset * 2f);
         float height = (placement.RowSpan * InventoryGridCellSize) - (InventoryPlacementInset * 2f);
+        float baseWidth = (Mathf.Max(1, placement.Item.inventoryColumns) * InventoryGridCellSize) - (InventoryPlacementInset * 2f);
+        float baseHeight = (Mathf.Max(1, placement.Item.inventoryRows) * InventoryGridCellSize) - (InventoryPlacementInset * 2f);
 
         RectTransform rect = CreateRect(
             "Placement_" + placement.Item.name,
@@ -2818,18 +3913,28 @@ public class GameplayUIRoot : MonoBehaviour
         };
 
         view.background = rect.gameObject.AddComponent<Image>();
-        view.background.color = new Color(0.23f, 0.26f, 0.31f, 0.98f);
+        view.background.color = GetInventorySlotColor(placement.Item);
         Outline placementOutline = rect.gameObject.AddComponent<Outline>();
         placementOutline.effectColor = new Color(0.56f, 0.62f, 0.70f, 0.96f);
         placementOutline.effectDistance = new Vector2(1f, -1f);
 
-        RectTransform iconRect = CreateRect(
-            "Icon",
+        view.contentRect = CreateRect(
+            "Content",
             rect,
             new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f),
-            new Vector2(width - 8f, height - 8f));
+            new Vector2(baseWidth, baseHeight));
+        view.contentRect.anchoredPosition = Vector2.zero;
+        view.contentRect.localEulerAngles = new Vector3(0f, 0f, GetClockwiseRotationDegrees(placement.Rotated ? 1 : 0));
+
+        RectTransform iconRect = CreateRect(
+            "Icon",
+            view.contentRect,
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(baseWidth - 8f, baseHeight - 8f));
         iconRect.anchoredPosition = new Vector2(0f, -2f);
         view.iconImage = iconRect.gameObject.AddComponent<Image>();
         view.iconImage.sprite = placement.Item.GetGridInventorySpriteOrFallback();
@@ -2842,12 +3947,12 @@ public class GameplayUIRoot : MonoBehaviour
 
         view.nameText = CreateText(
             "Name",
-            rect,
+            view.contentRect,
             Shorten(placement.Item.displayName, 14),
             12,
             TextAnchor.UpperLeft,
             new Vector2(4f, -4f),
-            new Vector2(width - 8f, 16f),
+            new Vector2(baseWidth - 8f, 16f),
             FontStyle.Bold);
         view.nameText.color = new Color(0.94f, 0.96f, 0.98f, 0.96f);
         Shadow nameShadow = view.nameText.gameObject.AddComponent<Shadow>();
@@ -2866,7 +3971,7 @@ public class GameplayUIRoot : MonoBehaviour
 
         view.quantityText = CreateText(
             "Quantity",
-            rect,
+            view.contentRect,
             placement.Quantity > 1 ? placement.Quantity.ToString() : string.Empty,
             13,
             TextAnchor.LowerRight,
@@ -2882,6 +3987,17 @@ public class GameplayUIRoot : MonoBehaviour
         quantityShadow.effectDistance = new Vector2(1f, -1f);
 
         return view;
+    }
+
+    private static int NormalizeQuarterTurns(int quarterTurns)
+    {
+        int normalized = quarterTurns % 4;
+        return normalized < 0 ? normalized + 4 : normalized;
+    }
+
+    private static float GetClockwiseRotationDegrees(int quarterTurns)
+    {
+        return -90f * NormalizeQuarterTurns(quarterTurns);
     }
 
     private void BuildStatusHudPanel()
@@ -3146,6 +4262,17 @@ public class GameplayUIRoot : MonoBehaviour
             FontStyle.Bold);
         hydrationLabelText.color = new Color(0.46f, 0.78f, 0.98f, 1f);
 
+        Text hydrationDrainText = CreateText(
+            "HydrationDrainRateV2",
+            hydrationRow,
+            "-1/20s",
+            11,
+            TextAnchor.UpperLeft,
+            new Vector2(94f, -1f),
+            new Vector2(70f, 16f),
+            FontStyle.Normal);
+        hydrationDrainText.color = new Color(0.46f, 0.78f, 0.98f, 0.82f);
+
         hydrationValueText = CreateText(
             "HydrationValueV2",
             hydrationRow,
@@ -3204,6 +4331,17 @@ public class GameplayUIRoot : MonoBehaviour
             new Vector2(74f, 18f),
             FontStyle.Bold);
         hungerLabelText.color = new Color(0.98f, 0.64f, 0.20f, 1f);
+
+        Text hungerDrainText = CreateText(
+            "HungerDrainRateV2",
+            hungerRow,
+            "-0.5/20s",
+            11,
+            TextAnchor.UpperLeft,
+            new Vector2(98f, -1f),
+            new Vector2(82f, 16f),
+            FontStyle.Normal);
+        hungerDrainText.color = new Color(0.98f, 0.64f, 0.20f, 0.82f);
 
         hungerValueText = CreateText(
             "HungerValueV2",
@@ -3458,25 +4596,38 @@ public class GameplayUIRoot : MonoBehaviour
             new Vector2(0f, 1f),
             new Vector2(0f, 1f),
             new Vector2(0f, 1f),
-            new Vector2(170f, 148f),
+            new Vector2(154f, 166f),
             new Color(0.08f, 0.10f, 0.13f, 0.97f));
 
         VerticalLayoutGroup layout = contextMenuPanel.gameObject.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(10, 10, 10, 10);
-        layout.spacing = 8f;
+        layout.padding = new RectOffset(6, 6, 6, 6);
+        layout.spacing = 6f;
         layout.childAlignment = TextAnchor.UpperCenter;
         layout.childControlWidth = true;
-        layout.childControlHeight = false;
+        layout.childControlHeight = true;
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
 
         contextPrimaryButton = CreateButton(contextMenuPanel, out contextPrimaryText);
+        SetContextButtonHeight(contextPrimaryButton);
         contextPrimaryButton.onClick.AddListener(OnContextPrimaryAction);
 
         contextSecondaryButton = CreateButton(contextMenuPanel, out contextSecondaryText);
+        SetContextButtonHeight(contextSecondaryButton);
         contextSecondaryButton.onClick.AddListener(OnContextSecondaryAction);
 
+        contextInspectButton = CreateButton(contextMenuPanel, out Text inspectText);
+        SetContextButtonHeight(contextInspectButton);
+        inspectText.text = "Inspect";
+        contextInspectButton.onClick.AddListener(OnContextInspectAction);
+
+        contextSplitButton = CreateButton(contextMenuPanel, out Text splitText);
+        SetContextButtonHeight(contextSplitButton);
+        splitText.text = "Split";
+        contextSplitButton.onClick.AddListener(OnContextSplitAction);
+
         contextDropButton = CreateButton(contextMenuPanel, out Text dropText);
+        SetContextButtonHeight(contextDropButton);
         dropText.text = "Drop";
         contextDropButton.onClick.AddListener(OnContextDropAction);
     }
@@ -3639,6 +4790,225 @@ public class GameplayUIRoot : MonoBehaviour
         dropCancelButton.onClick.AddListener(OnDropCancel);
     }
 
+    private void BuildSplitDialog()
+    {
+        splitDialogPanel = CreatePanel(
+            "SplitDialogPanel",
+            runtimeRoot,
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(420f, 360f),
+            new Color(0.04f, 0.05f, 0.07f, 0.98f));
+
+        splitDialogTitleText = CreateText("Title", splitDialogPanel, "Select Quantity", 26, TextAnchor.UpperCenter, new Vector2(0f, -18f), new Vector2(320f, 34f), FontStyle.Bold);
+        splitDialogTitleText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
+        splitDialogTitleText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+        splitDialogTitleText.rectTransform.pivot = new Vector2(0.5f, 1f);
+
+        Button closeButton = CreateButton(splitDialogPanel, out Text closeText, 34f);
+        closeText.text = "X";
+        RectTransform closeRect = closeButton.GetComponent<RectTransform>();
+        closeRect.anchorMin = new Vector2(1f, 1f);
+        closeRect.anchorMax = new Vector2(1f, 1f);
+        closeRect.pivot = new Vector2(1f, 1f);
+        closeRect.anchoredPosition = new Vector2(-14f, -14f);
+        closeButton.onClick.AddListener(OnSplitCancel);
+
+        RectTransform itemPreviewRect = CreateRect(
+            "ItemPreview",
+            splitDialogPanel,
+            new Vector2(0.5f, 1f),
+            new Vector2(0.5f, 1f),
+            new Vector2(0.5f, 1f),
+            new Vector2(88f, 88f));
+        itemPreviewRect.anchoredPosition = new Vector2(0f, -64f);
+        Image itemPreviewBackground = itemPreviewRect.gameObject.AddComponent<Image>();
+        itemPreviewBackground.color = new Color(0.12f, 0.14f, 0.18f, 0.98f);
+        splitDialogItemIconImage = CreateRect(
+            "Icon",
+            itemPreviewRect,
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(72f, 72f)).gameObject.AddComponent<Image>();
+        splitDialogItemIconImage.preserveAspect = true;
+        splitDialogItemIconImage.color = Color.white;
+
+        RectTransform qtyRow = CreateRect("QuantityRow", splitDialogPanel, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(260f, 40f));
+        qtyRow.anchoredPosition = new Vector2(0f, -166f);
+        HorizontalLayoutGroup qtyLayout = qtyRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        qtyLayout.spacing = 10f;
+        qtyLayout.childAlignment = TextAnchor.MiddleCenter;
+        qtyLayout.childControlWidth = false;
+        qtyLayout.childControlHeight = false;
+        qtyLayout.childForceExpandWidth = false;
+        qtyLayout.childForceExpandHeight = false;
+
+        splitMinusButton = CreateButton(qtyRow, out Text minusText, 38f);
+        minusText.text = "-";
+        splitMinusButton.onClick.AddListener(OnSplitMinus);
+
+        RectTransform inputRect = CreateRect("QuantityInput", qtyRow, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(110f, 34f));
+        Image inputBackground = inputRect.gameObject.AddComponent<Image>();
+        inputBackground.color = new Color(0.02f, 0.03f, 0.04f, 1f);
+        splitQuantityInput = inputRect.gameObject.AddComponent<InputField>();
+        splitQuantityInput.contentType = InputField.ContentType.IntegerNumber;
+        splitQuantityInput.textComponent = CreateText("Text", inputRect, "1", 20, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, FontStyle.Bold);
+        StretchToParent(splitQuantityInput.textComponent.rectTransform, new Vector2(4f, 0f), new Vector2(4f, 0f));
+        splitQuantityInput.onEndEdit.AddListener(OnSplitInputEndEdit);
+
+        splitPlusButton = CreateButton(qtyRow, out Text plusText, 38f);
+        plusText.text = "+";
+        splitPlusButton.onClick.AddListener(OnSplitPlus);
+
+        RectTransform sliderRect = CreateRect("QuantitySlider", splitDialogPanel, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(330f, 34f));
+        sliderRect.anchoredPosition = new Vector2(0f, -218f);
+        splitQuantitySlider = sliderRect.gameObject.AddComponent<Slider>();
+        splitQuantitySlider.minValue = 1f;
+        splitQuantitySlider.maxValue = 1f;
+        splitQuantitySlider.wholeNumbers = true;
+        splitQuantitySlider.onValueChanged.AddListener(OnSplitSliderChanged);
+
+        RectTransform sliderBackgroundRect = CreateRect("Background", sliderRect, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero);
+        StretchToParent(sliderBackgroundRect, new Vector2(0f, 15f), new Vector2(0f, 15f));
+        Image sliderBackground = sliderBackgroundRect.gameObject.AddComponent<Image>();
+        sliderBackground.color = new Color(0.28f, 0.30f, 0.34f, 1f);
+        splitQuantitySlider.targetGraphic = sliderBackground;
+
+        RectTransform fillArea = CreateRect("Fill Area", sliderRect, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero);
+        StretchToParent(fillArea, new Vector2(0f, 15f), new Vector2(0f, 15f));
+        RectTransform fillRect = CreateRect("Fill", fillArea, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero);
+        StretchToParent(fillRect, Vector2.zero, Vector2.zero);
+        Image fillImage = fillRect.gameObject.AddComponent<Image>();
+        fillImage.color = new Color(1f, 0.65f, 0.04f, 1f);
+        splitQuantitySlider.fillRect = fillRect;
+
+        RectTransform handleArea = CreateRect("Handle Slide Area", sliderRect, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero);
+        StretchToParent(handleArea, new Vector2(8f, 0f), new Vector2(8f, 0f));
+        RectTransform handleRect = CreateRect("Handle", handleArea, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(12f, 24f));
+        Image handleImage = handleRect.gameObject.AddComponent<Image>();
+        handleImage.color = new Color(1f, 0.64f, 0.03f, 1f);
+        splitQuantitySlider.handleRect = handleRect;
+
+        splitDialogMaxText = CreateText("Range", splitDialogPanel, "1 / 1", 16, TextAnchor.MiddleCenter, new Vector2(0f, -250f), new Vector2(320f, 24f), FontStyle.Normal);
+        splitDialogMaxText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
+        splitDialogMaxText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+        splitDialogMaxText.rectTransform.pivot = new Vector2(0.5f, 1f);
+
+        RectTransform buttonRow = CreateRect("Buttons", splitDialogPanel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(300f, 48f));
+        buttonRow.anchoredPosition = new Vector2(0f, 24f);
+        HorizontalLayoutGroup buttonLayout = buttonRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        buttonLayout.spacing = 12f;
+        buttonLayout.childAlignment = TextAnchor.MiddleCenter;
+        buttonLayout.childControlWidth = false;
+        buttonLayout.childControlHeight = false;
+        buttonLayout.childForceExpandWidth = false;
+        buttonLayout.childForceExpandHeight = false;
+
+        splitConfirmButton = CreateButton(buttonRow, out Text confirmText, 140f);
+        confirmText.text = "Split";
+        splitConfirmButton.onClick.AddListener(OnSplitConfirm);
+
+        splitCancelButton = CreateButton(buttonRow, out Text cancelText, 120f);
+        cancelText.text = "Cancel";
+        splitCancelButton.onClick.AddListener(OnSplitCancel);
+
+        splitDialogPanel.gameObject.SetActive(false);
+    }
+
+    private void BuildUseProgressPanel()
+    {
+        useProgressPanel = CreateRect(
+            "UseProgressPanel",
+            runtimeRoot,
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(260f, 290f));
+        CanvasGroup canvasGroup = useProgressPanel.gameObject.AddComponent<CanvasGroup>();
+        canvasGroup.blocksRaycasts = false;
+        canvasGroup.interactable = false;
+
+        if (useProgressCircleSprite == null)
+            useProgressCircleSprite = CreateCircleSprite("UseProgressCircle", 128, 0f, 0.5f);
+        if (useProgressRingSprite == null)
+            useProgressRingSprite = CreateCircleSprite("UseProgressRing", 128, 0.39f, 0.5f);
+
+        RectTransform circleRect = CreateRect(
+            "Circle",
+            useProgressPanel,
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(106f, 106f));
+        circleRect.anchoredPosition = new Vector2(0f, 58f);
+        useProgressBackgroundImage = circleRect.gameObject.AddComponent<Image>();
+        useProgressBackgroundImage.sprite = useProgressCircleSprite;
+        useProgressBackgroundImage.color = new Color(0f, 0f, 0f, 0.52f);
+        useProgressBackgroundImage.raycastTarget = false;
+
+        RectTransform ringRect = CreateRect(
+            "Ring",
+            circleRect,
+            Vector2.zero,
+            Vector2.one,
+            new Vector2(0.5f, 0.5f),
+            Vector2.zero);
+        StretchToParent(ringRect, Vector2.zero, Vector2.zero);
+        useProgressRingImage = ringRect.gameObject.AddComponent<Image>();
+        useProgressRingImage.sprite = useProgressRingSprite;
+        useProgressRingImage.color = new Color(1f, 0.78f, 0.16f, 0.72f);
+        useProgressRingImage.type = Image.Type.Filled;
+        useProgressRingImage.fillMethod = Image.FillMethod.Radial360;
+        useProgressRingImage.fillOrigin = (int)Image.Origin360.Top;
+        useProgressRingImage.fillClockwise = false;
+        useProgressRingImage.raycastTarget = false;
+
+        useProgressCountdownText = CreateText(
+            "Countdown",
+            circleRect,
+            "0",
+            35,
+            TextAnchor.MiddleCenter,
+            Vector2.zero,
+            Vector2.zero,
+            FontStyle.Bold);
+        StretchToParent(useProgressCountdownText.rectTransform, Vector2.zero, Vector2.zero);
+
+        RectTransform nameRect = CreateRect(
+            "Name",
+            useProgressPanel,
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(230f, 30f));
+        nameRect.anchoredPosition = new Vector2(0f, -20f);
+        useProgressItemNameText = nameRect.gameObject.AddComponent<Text>();
+        useProgressItemNameText.font = uiFont;
+        useProgressItemNameText.fontSize = 19;
+        useProgressItemNameText.alignment = TextAnchor.MiddleCenter;
+        useProgressItemNameText.color = new Color(0.95f, 0.96f, 0.98f, 1f);
+        useProgressItemNameText.fontStyle = FontStyle.Bold;
+        useProgressItemNameText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        useProgressItemNameText.verticalOverflow = VerticalWrapMode.Truncate;
+        useProgressItemNameText.text = "Using";
+
+        RectTransform iconRect = CreateRect(
+            "Icon",
+            useProgressPanel,
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(104f, 104f));
+        iconRect.anchoredPosition = new Vector2(0f, -96f);
+        useProgressItemIconImage = iconRect.gameObject.AddComponent<Image>();
+        useProgressItemIconImage.preserveAspect = true;
+        useProgressItemIconImage.raycastTarget = false;
+
+        useProgressPanel.gameObject.SetActive(false);
+    }
+
     private RectTransform CreatePanel(
         string name,
         Transform parent,
@@ -3700,6 +5070,48 @@ public class GameplayUIRoot : MonoBehaviour
         iconImage.preserveAspect = true;
         iconImage.enabled = iconImage.sprite != null;
         return iconImage;
+    }
+
+    private static Sprite CreateCircleSprite(string spriteName, int size, float innerRadiusRatio, float outerRadiusRatio)
+    {
+        int textureSize = Mathf.Max(16, size);
+        Texture2D texture = new Texture2D(textureSize, textureSize, TextureFormat.ARGB32, false)
+        {
+            name = spriteName + "_Texture",
+            hideFlags = HideFlags.HideAndDontSave,
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp
+        };
+
+        Color32 transparent = new Color32(255, 255, 255, 0);
+        Color32 solid = new Color32(255, 255, 255, 255);
+        Color32[] pixels = new Color32[textureSize * textureSize];
+        float center = (textureSize - 1) * 0.5f;
+        float outerRadius = center * Mathf.Clamp01(outerRadiusRatio * 2f);
+        float innerRadius = center * Mathf.Clamp01(innerRadiusRatio * 2f);
+
+        for (int y = 0; y < textureSize; y++)
+        {
+            for (int x = 0; x < textureSize; x++)
+            {
+                float dx = x - center;
+                float dy = y - center;
+                float distance = Mathf.Sqrt(dx * dx + dy * dy);
+                bool inside = distance <= outerRadius && distance >= innerRadius;
+                pixels[(y * textureSize) + x] = inside ? solid : transparent;
+            }
+        }
+
+        texture.SetPixels32(pixels);
+        texture.Apply(false, true);
+
+        Sprite sprite = Sprite.Create(
+            texture,
+            new Rect(0f, 0f, textureSize, textureSize),
+            new Vector2(0.5f, 0.5f),
+            textureSize);
+        sprite.name = spriteName;
+        return sprite;
     }
 
     private void ApplyHudLabelFont(params Text[] texts)
@@ -3829,7 +5241,16 @@ public class GameplayUIRoot : MonoBehaviour
             return;
         }
 
+        if (splitDialogPanel != null && splitDialogPanel.gameObject.activeSelf)
+        {
+            CancelGridDrag();
+            return;
+        }
+
         if (!TryGetPointerScreenPosition(out Vector2 pointerPosition))
+            return;
+
+        if (!gridDragActive && itemInspectPanel != null && itemInspectPanel.IsPointerOver(pointerPosition))
             return;
 
         if (!gridDragActive)
@@ -3845,6 +5266,7 @@ public class GameplayUIRoot : MonoBehaviour
             return;
         }
 
+        HandleGridDragRotationInput();
         UpdateGridDragPreviewPosition(pointerPosition);
         UpdateGridDragHoverVisuals(pointerPosition);
 
@@ -3861,6 +5283,30 @@ public class GameplayUIRoot : MonoBehaviour
         }
     }
 
+    private void HandleGridDragRotationInput()
+    {
+        if (activeGridDrag == null || activeGridDrag.item == null)
+            return;
+
+        if (!GridItemPlacement.CanRotate(activeGridDrag.item))
+            return;
+
+        if (!WasGridRotatePressedThisFrame())
+            return;
+
+        activeGridDrag.rotated = !activeGridDrag.rotated;
+        activeGridDrag.rotationQuarterTurns = activeGridDrag.rotated ? 1 : 0;
+
+        int rowSpan = GridItemPlacement.GetRowSpan(activeGridDrag.item, activeGridDrag.rotated);
+        int columnSpan = GridItemPlacement.GetColumnSpan(activeGridDrag.item, activeGridDrag.rotated);
+        ApplyGridDragPreviewVisual(
+            activeGridDrag.item,
+            activeGridDrag.quantity,
+            rowSpan,
+            columnSpan,
+            activeGridDrag.rotationQuarterTurns);
+    }
+
     private bool TryBeginGridDragAt(Vector2 screenPosition)
     {
         Camera eventCamera = rootCanvas != null && rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
@@ -3869,6 +5315,9 @@ public class GameplayUIRoot : MonoBehaviour
 
         if (TryGetEquipmentSlotAt(screenPosition, eventCamera, out EquipmentSlotType equipmentSlotType))
             return BeginEquipmentDrag(equipmentSlotType, screenPosition);
+
+        if (TryGetCorpseEquipmentSlotAt(screenPosition, eventCamera, out EquipmentSlotType corpseEquipmentSlotType))
+            return BeginCorpseEquipmentDrag(corpseEquipmentSlotType, screenPosition);
 
         if (TryGetPopupPlacementAt(screenPosition, eventCamera, out GridPlacementView popupPlacementView))
             return BeginGridDrag(popupPlacementView, true, pointerScreenPosition: screenPosition);
@@ -3893,7 +5342,7 @@ public class GameplayUIRoot : MonoBehaviour
 
     private bool BeginEquipmentDrag(EquipmentSlotType slotType, Vector2 pointerScreenPosition)
     {
-        if (equipment == null || !CanUnequipEquipmentSlot(slotType))
+        if (equipment == null || !CanDragEquipmentSlot(slotType))
             return false;
 
         InventorySlot sourceSlot = equipment.GetSlot(slotType);
@@ -3912,7 +5361,9 @@ public class GameplayUIRoot : MonoBehaviour
             quantity = sourceSlot.Quantity,
             sourceRow = 0,
             sourceColumn = 0,
+            sourceRotated = false,
             rotated = false,
+            rotationQuarterTurns = 0,
             runtimeData = sourceSlot.GetRuntimeDataForTransfer(sourceSlot.Quantity)
         };
 
@@ -3921,7 +5372,55 @@ public class GameplayUIRoot : MonoBehaviour
             sourceSlot.Item,
             sourceSlot.Quantity,
             Mathf.Max(1, sourceSlot.Item.inventoryRows),
-            Mathf.Max(1, sourceSlot.Item.inventoryColumns));
+            Mathf.Max(1, sourceSlot.Item.inventoryColumns),
+            0);
+        UpdateGridDragPreviewPosition(pointerScreenPosition);
+        gridDragPreviewRect.gameObject.SetActive(true);
+        gridDragPreviewRect.SetAsLastSibling();
+        gridDragActive = true;
+
+        if (contextMenuPanel != null)
+            contextMenuPanel.gameObject.SetActive(false);
+
+        ClearContextSelection();
+        return true;
+    }
+
+    private bool BeginCorpseEquipmentDrag(EquipmentSlotType slotType, Vector2 pointerScreenPosition)
+    {
+        if (openedCorpseLoot == null)
+            return false;
+
+        InventorySlot sourceSlot = openedCorpseLoot.GetSlot(slotType);
+        if (sourceSlot == null || sourceSlot.IsEmpty || sourceSlot.Item == null)
+            return false;
+
+        activeGridDrag = new GridDragState
+        {
+            sourceIsCorpseEquipment = true,
+            sourceIsEquipment = false,
+            sourceIsPopup = false,
+            sourceContainerKind = GridContainerKind.CorpsePocket,
+            sourceCorpseEquipmentSlotType = slotType,
+            sourceSlotIndex = -1,
+            runtimeInstanceId = sourceSlot.RuntimeInstanceId,
+            item = sourceSlot.Item,
+            quantity = sourceSlot.Quantity,
+            sourceRow = 0,
+            sourceColumn = 0,
+            sourceRotated = false,
+            rotated = false,
+            rotationQuarterTurns = 0,
+            runtimeData = sourceSlot.GetRuntimeDataForTransfer(sourceSlot.Quantity)
+        };
+
+        EnsureGridDragPreview();
+        ApplyGridDragPreviewVisual(
+            sourceSlot.Item,
+            sourceSlot.Quantity,
+            Mathf.Max(1, sourceSlot.Item.inventoryRows),
+            Mathf.Max(1, sourceSlot.Item.inventoryColumns),
+            0);
         UpdateGridDragPreviewPosition(pointerScreenPosition);
         gridDragPreviewRect.gameObject.SetActive(true);
         gridDragPreviewRect.SetAsLastSibling();
@@ -3973,7 +5472,9 @@ public class GameplayUIRoot : MonoBehaviour
             quantity = sourcePlacement.Quantity,
             sourceRow = sourcePlacement.Row,
             sourceColumn = sourcePlacement.Column,
+            sourceRotated = sourcePlacement.Rotated,
             rotated = sourcePlacement.Rotated,
+            rotationQuarterTurns = sourcePlacement.Rotated ? 1 : 0,
             runtimeData = sourcePlacement.RuntimeData
         };
 
@@ -4015,9 +5516,18 @@ public class GameplayUIRoot : MonoBehaviour
         outline.effectColor = new Color(0.74f, 0.80f, 0.88f, 0.78f);
         outline.effectDistance = new Vector2(1f, -1f);
 
+        gridDragPreviewContentRect = CreateRect(
+            "Content",
+            gridDragPreviewRect,
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(56f, 56f));
+        gridDragPreviewContentRect.anchoredPosition = Vector2.zero;
+
         RectTransform iconRect = CreateRect(
             "Icon",
-            gridDragPreviewRect,
+            gridDragPreviewContentRect,
             new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f),
@@ -4028,9 +5538,24 @@ public class GameplayUIRoot : MonoBehaviour
         gridDragPreviewIcon.preserveAspect = true;
         gridDragPreviewIcon.raycastTarget = false;
 
+        gridDragPreviewNameText = CreateText(
+            "Name",
+            gridDragPreviewContentRect,
+            string.Empty,
+            12,
+            TextAnchor.UpperLeft,
+            new Vector2(4f, -4f),
+            new Vector2(48f, 16f),
+            FontStyle.Bold);
+        gridDragPreviewNameText.color = new Color(0.94f, 0.96f, 0.98f, 0.92f);
+        gridDragPreviewNameText.raycastTarget = false;
+        Shadow nameShadow = gridDragPreviewNameText.gameObject.AddComponent<Shadow>();
+        nameShadow.effectColor = new Color(0f, 0f, 0f, 0.8f);
+        nameShadow.effectDistance = new Vector2(1f, -1f);
+
         gridDragPreviewQuantityText = CreateText(
             "Quantity",
-            gridDragPreviewRect,
+            gridDragPreviewContentRect,
             string.Empty,
             13,
             TextAnchor.LowerRight,
@@ -4072,9 +5597,18 @@ public class GameplayUIRoot : MonoBehaviour
         gridDropPreviewOutline.effectColor = new Color(0.34f, 0.88f, 0.56f, 0.96f);
         gridDropPreviewOutline.effectDistance = new Vector2(1f, -1f);
 
+        gridDropPreviewContentRect = CreateRect(
+            "Content",
+            gridDropPreviewRect,
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(56f, 56f));
+        gridDropPreviewContentRect.anchoredPosition = Vector2.zero;
+
         RectTransform iconRect = CreateRect(
             "Icon",
-            gridDropPreviewRect,
+            gridDropPreviewContentRect,
             new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f),
@@ -4084,6 +5618,21 @@ public class GameplayUIRoot : MonoBehaviour
         gridDropPreviewIcon.color = new Color(1f, 1f, 1f, 0.92f);
         gridDropPreviewIcon.preserveAspect = true;
         gridDropPreviewIcon.raycastTarget = false;
+
+        gridDropPreviewNameText = CreateText(
+            "Name",
+            gridDropPreviewContentRect,
+            string.Empty,
+            12,
+            TextAnchor.UpperLeft,
+            new Vector2(4f, -4f),
+            new Vector2(48f, 16f),
+            FontStyle.Bold);
+        gridDropPreviewNameText.color = new Color(0.94f, 0.96f, 0.98f, 0.82f);
+        gridDropPreviewNameText.raycastTarget = false;
+        Shadow nameShadow = gridDropPreviewNameText.gameObject.AddComponent<Shadow>();
+        nameShadow.effectColor = new Color(0f, 0f, 0f, 0.75f);
+        nameShadow.effectDistance = new Vector2(1f, -1f);
     }
 
     private void ApplyGridDragPreviewVisual(GridItemPlacement placement)
@@ -4091,28 +5640,46 @@ public class GameplayUIRoot : MonoBehaviour
         if (gridDragPreviewRect == null || placement == null || placement.IsEmpty)
             return;
 
-        ApplyGridDragPreviewVisual(placement.Item, placement.Quantity, placement.RowSpan, placement.ColumnSpan);
+        ApplyGridDragPreviewVisual(placement.Item, placement.Quantity, placement.RowSpan, placement.ColumnSpan, placement.Rotated ? 1 : 0);
     }
 
-    private void ApplyGridDragPreviewVisual(ItemDefinition item, int quantity, int rowSpan, int columnSpan)
+    private void ApplyGridDragPreviewVisual(ItemDefinition item, int quantity, int rowSpan, int columnSpan, int rotationQuarterTurns)
     {
         if (gridDragPreviewRect == null || item == null)
             return;
 
         float width = (columnSpan * InventoryGridCellSize) - (InventoryPlacementInset * 2f);
         float height = (rowSpan * InventoryGridCellSize) - (InventoryPlacementInset * 2f);
+        float baseWidth = (Mathf.Max(1, item.inventoryColumns) * InventoryGridCellSize) - (InventoryPlacementInset * 2f);
+        float baseHeight = (Mathf.Max(1, item.inventoryRows) * InventoryGridCellSize) - (InventoryPlacementInset * 2f);
         gridDragPreviewRect.sizeDelta = new Vector2(width, height);
+        gridDragPreviewRect.localEulerAngles = Vector3.zero;
+
+        if (gridDragPreviewContentRect != null)
+        {
+            gridDragPreviewContentRect.sizeDelta = new Vector2(baseWidth, baseHeight);
+            gridDragPreviewContentRect.localEulerAngles = new Vector3(0f, 0f, GetClockwiseRotationDegrees(rotationQuarterTurns));
+        }
+
+        if (gridDragPreviewBackground != null)
+            gridDragPreviewBackground.color = WithAlpha(GetInventorySlotColor(item), 0.72f);
 
         if (gridDragPreviewIcon != null)
         {
             RectTransform iconRect = gridDragPreviewIcon.rectTransform;
-            iconRect.sizeDelta = new Vector2(Mathf.Max(16f, width - 2f), Mathf.Max(16f, height - 2f));
+            iconRect.sizeDelta = new Vector2(Mathf.Max(16f, baseWidth - 2f), Mathf.Max(16f, baseHeight - 2f));
             gridDragPreviewIcon.sprite = item.GetGridInventorySpriteOrFallback();
             gridDragPreviewIcon.enabled = gridDragPreviewIcon.sprite != null;
             gridDragPreviewIcon.color = new Color(1f, 1f, 1f, gridDragPreviewIcon.sprite != null ? 0.98f : 1f);
             iconRect.localScale = item != null && item.ShouldFlipGridDisplaySprite()
                 ? new Vector3(-1f, 1f, 1f)
                 : Vector3.one;
+        }
+
+        if (gridDragPreviewNameText != null)
+        {
+            gridDragPreviewNameText.text = Shorten(item.displayName, 14);
+            gridDragPreviewNameText.rectTransform.sizeDelta = new Vector2(Mathf.Max(24f, baseWidth - 8f), 16f);
         }
 
         if (gridDragPreviewQuantityText != null)
@@ -4130,7 +5697,13 @@ public class GameplayUIRoot : MonoBehaviour
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(runtimeRoot, screenPosition, eventCamera, out Vector2 localPoint))
             return;
 
-        gridDragPreviewRect.anchoredPosition = new Vector2(localPoint.x + 14f, localPoint.y - 14f);
+        Rect rootRect = runtimeRoot.rect;
+        float x = localPoint.x + 14f;
+        float y = localPoint.y - rootRect.height - 14f;
+        Vector2 previewSize = gridDragPreviewRect.sizeDelta;
+        x = Mathf.Clamp(x, 0f, Mathf.Max(0f, rootRect.width - previewSize.x));
+        y = Mathf.Clamp(y, -Mathf.Max(0f, rootRect.height - previewSize.y), 0f);
+        gridDragPreviewRect.anchoredPosition = new Vector2(x, y);
     }
 
     private bool TryCompleteGridDrag(Vector2 screenPosition)
@@ -4179,6 +5752,14 @@ public class GameplayUIRoot : MonoBehaviour
         if (view == null)
             return;
 
+        if (!IsDraggedFootprintInsideTargetBounds(target))
+        {
+            if (view.gridFrameImage != null)
+                view.gridFrameImage.color = GridFrameInvalidColor;
+
+            return;
+        }
+
         bool canPlace = CanPlaceDraggedAtTarget(target);
         if (view.gridFrameImage != null)
             view.gridFrameImage.color = canPlace ? GridFrameHoverColor : GridFrameInvalidColor;
@@ -4212,6 +5793,9 @@ public class GameplayUIRoot : MonoBehaviour
         if (externalContainerView?.gridFrameImage != null)
             externalContainerView.gridFrameImage.color = GridFrameDefaultColor;
 
+        if (corpsePocketView?.gridFrameImage != null)
+            corpsePocketView.gridFrameImage.color = GridFrameDefaultColor;
+
         if (containerPopupView?.gridFrameImage != null)
             containerPopupView.gridFrameImage.color = GridFrameDefaultColor;
 
@@ -4230,6 +5814,9 @@ public class GameplayUIRoot : MonoBehaviour
         if (target.actualContainer == null)
             return false;
 
+        if (CanMergeDraggedAtTarget(target))
+            return true;
+
         if (activeGridDrag.sourceIsEquipment)
         {
             if (IsDraggingEquipmentIntoOwnContainer(target))
@@ -4240,7 +5827,21 @@ public class GameplayUIRoot : MonoBehaviour
                 activeGridDrag.quantity,
                 target.row,
                 target.column,
-                false,
+                activeGridDrag.rotated,
+                null);
+        }
+
+        if (activeGridDrag.sourceIsCorpseEquipment)
+        {
+            if (IsDraggingCorpseEquipmentIntoOwnContainer(target))
+                return false;
+
+            return target.actualContainer.CanPlaceStrict(
+                activeGridDrag.item,
+                activeGridDrag.quantity,
+                target.row,
+                target.column,
+                activeGridDrag.rotated,
                 null);
         }
 
@@ -4270,13 +5871,8 @@ public class GameplayUIRoot : MonoBehaviour
         if (occupancy == null)
             return false;
 
-        GridItemPlacement ignored = null;
-        if (ReferenceEquals(target.actualContainer, sourceActualContainer))
-        {
-            ignored = activeGridDrag.sourceIsPopup
-                ? FindActualDragSourcePlacement(sourceActualContainer)
-                : FindDisplayPlacementByRuntimeId(activeGridDrag.sourceContainerKind, activeGridDrag.runtimeInstanceId);
-        }
+        GridItemPlacement sourceActualPlacement = FindActualDragSourcePlacement(sourceActualContainer);
+        GridItemPlacement ignored = FindIgnoredDragPlacementForTarget(target, sourceActualContainer, sourceActualPlacement);
 
         return occupancy.CanPlaceStrict(
             activeGridDrag.item,
@@ -4285,6 +5881,19 @@ public class GameplayUIRoot : MonoBehaviour
             target.column,
             activeGridDrag.rotated,
             ignored);
+    }
+
+    private bool IsDraggedFootprintInsideTargetBounds(GridDropTarget target)
+    {
+        if (activeGridDrag == null || activeGridDrag.item == null || target.actualContainer == null)
+            return false;
+
+        int rowSpan = GridItemPlacement.GetRowSpan(activeGridDrag.item, activeGridDrag.rotated);
+        int columnSpan = GridItemPlacement.GetColumnSpan(activeGridDrag.item, activeGridDrag.rotated);
+        return target.row >= 0
+            && target.column >= 0
+            && target.row + rowSpan <= target.actualContainer.RowCount
+            && target.column + columnSpan <= target.actualContainer.ColumnCount;
     }
 
     private void ShowGridDropPreview(GridContainerView view, GridDropTarget target, bool canPlace)
@@ -4303,11 +5912,20 @@ public class GameplayUIRoot : MonoBehaviour
         int columnSpan = GridItemPlacement.GetColumnSpan(activeGridDrag.item, activeGridDrag.rotated);
         float width = (columnSpan * InventoryGridCellSize) - (InventoryPlacementInset * 2f);
         float height = (rowSpan * InventoryGridCellSize) - (InventoryPlacementInset * 2f);
+        float baseWidth = (Mathf.Max(1, activeGridDrag.item.inventoryColumns) * InventoryGridCellSize) - (InventoryPlacementInset * 2f);
+        float baseHeight = (Mathf.Max(1, activeGridDrag.item.inventoryRows) * InventoryGridCellSize) - (InventoryPlacementInset * 2f);
         gridDropPreviewRect.sizeDelta = new Vector2(width, height);
         gridDropPreviewRect.anchoredPosition = new Vector2(
             (target.column * InventoryGridCellSize) + InventoryPlacementInset,
             -((target.row * InventoryGridCellSize) + InventoryPlacementInset));
+        gridDropPreviewRect.localEulerAngles = Vector3.zero;
         gridDropPreviewRect.SetAsLastSibling();
+
+        if (gridDropPreviewContentRect != null)
+        {
+            gridDropPreviewContentRect.sizeDelta = new Vector2(baseWidth, baseHeight);
+            gridDropPreviewContentRect.localEulerAngles = new Vector3(0f, 0f, GetClockwiseRotationDegrees(activeGridDrag.rotationQuarterTurns));
+        }
 
         if (gridDropPreviewBackground != null)
             gridDropPreviewBackground.color = canPlace
@@ -4322,13 +5940,19 @@ public class GameplayUIRoot : MonoBehaviour
         if (gridDropPreviewIcon != null)
         {
             RectTransform iconRect = gridDropPreviewIcon.rectTransform;
-            iconRect.sizeDelta = new Vector2(Mathf.Max(16f, width - 8f), Mathf.Max(16f, height - 8f));
+            iconRect.sizeDelta = new Vector2(Mathf.Max(16f, baseWidth - 8f), Mathf.Max(16f, baseHeight - 8f));
             gridDropPreviewIcon.sprite = activeGridDrag.item.GetGridInventorySpriteOrFallback();
             gridDropPreviewIcon.enabled = gridDropPreviewIcon.sprite != null;
             gridDropPreviewIcon.color = new Color(1f, 1f, 1f, canPlace ? 0.92f : 0.68f);
             iconRect.localScale = activeGridDrag.item != null && activeGridDrag.item.ShouldFlipGridDisplaySprite()
                 ? new Vector3(-1f, 1f, 1f)
                 : Vector3.one;
+        }
+
+        if (gridDropPreviewNameText != null)
+        {
+            gridDropPreviewNameText.text = Shorten(activeGridDrag.item.displayName, 14);
+            gridDropPreviewNameText.rectTransform.sizeDelta = new Vector2(Mathf.Max(24f, baseWidth - 8f), 16f);
         }
 
         gridDropPreviewRect.gameObject.SetActive(true);
@@ -4351,6 +5975,9 @@ public class GameplayUIRoot : MonoBehaviour
         if (kind == GridContainerKind.External)
             return externalContainerView;
 
+        if (kind == GridContainerKind.CorpsePocket)
+            return corpsePocketView;
+
         return gridContainerViews.TryGetValue(kind, out GridContainerView view) ? view : null;
     }
 
@@ -4358,6 +5985,9 @@ public class GameplayUIRoot : MonoBehaviour
     {
         if (kind == GridContainerKind.External)
             return openedSearchableContainer != null ? openedSearchableContainer.ContainerState : null;
+
+        if (kind == GridContainerKind.CorpsePocket)
+            return openedCorpseLoot != null ? openedCorpseLoot.PocketContainer : null;
 
         return gridInventory != null ? gridInventory.GetContainer(kind) : null;
     }
@@ -4395,6 +6025,16 @@ public class GameplayUIRoot : MonoBehaviour
             if (TryResolveGridDropTarget(screenPosition, eventCamera, externalContainerView.gridRect, externalContainer, GridContainerKind.External, false, out target))
             {
                 target = new GridDropTarget(false, false, GridContainerKind.External, externalContainer, externalContainer, default, target.row, target.column);
+                return true;
+            }
+        }
+
+        if (corpsePocketView != null && corpseLootPanel != null && corpseLootPanel.gameObject.activeInHierarchy)
+        {
+            GridContainerState corpsePocket = GetActualContainerState(GridContainerKind.CorpsePocket);
+            if (TryResolveGridDropTarget(screenPosition, eventCamera, corpsePocketView.gridRect, corpsePocket, GridContainerKind.CorpsePocket, false, out target))
+            {
+                target = new GridDropTarget(false, false, GridContainerKind.CorpsePocket, corpsePocket, corpsePocket, default, target.row, target.column);
                 return true;
             }
         }
@@ -4466,6 +6106,28 @@ public class GameplayUIRoot : MonoBehaviour
         return false;
     }
 
+    private bool TryGetCorpseEquipmentSlotAt(Vector2 screenPosition, Camera eventCamera, out EquipmentSlotType slotType)
+    {
+        slotType = default;
+        if (openedCorpseLoot == null || corpseLootPanel == null || !corpseLootPanel.gameObject.activeInHierarchy)
+            return false;
+
+        foreach (KeyValuePair<EquipmentSlotType, SlotView> pair in corpseEquipmentSlotViews)
+        {
+            SlotView slotView = pair.Value;
+            if (slotView?.rect == null || !slotView.rect.gameObject.activeInHierarchy)
+                continue;
+
+            if (!RectTransformUtility.RectangleContainsScreenPoint(slotView.rect, screenPosition, eventCamera))
+                continue;
+
+            slotType = pair.Key;
+            return true;
+        }
+
+        return false;
+    }
+
     private bool TryGetCarryPlacementAt(Vector2 screenPosition, Camera eventCamera, out GridPlacementView placementView)
     {
         placementView = null;
@@ -4475,6 +6137,22 @@ public class GameplayUIRoot : MonoBehaviour
             for (int i = 0; i < externalContainerView.placementViews.Count; i++)
             {
                 GridPlacementView candidate = externalContainerView.placementViews[i];
+                if (candidate?.rect == null)
+                    continue;
+
+                if (!RectTransformUtility.RectangleContainsScreenPoint(candidate.rect, screenPosition, eventCamera))
+                    continue;
+
+                placementView = candidate;
+                return true;
+            }
+        }
+
+        if (corpsePocketView != null && corpseLootPanel != null && corpseLootPanel.gameObject.activeInHierarchy)
+        {
+            for (int i = 0; i < corpsePocketView.placementViews.Count; i++)
+            {
+                GridPlacementView candidate = corpsePocketView.placementViews[i];
                 if (candidate?.rect == null)
                     continue;
 
@@ -4607,6 +6285,69 @@ public class GameplayUIRoot : MonoBehaviour
         return null;
     }
 
+    private bool CanMergeDraggedAtTarget(GridDropTarget target)
+    {
+        if (activeGridDrag == null || activeGridDrag.item == null || !activeGridDrag.item.canStack || target.actualContainer == null)
+            return false;
+
+        if (activeGridDrag.sourceIsEquipment || activeGridDrag.sourceIsCorpseEquipment || activeGridDrag.sourceSlotIndex >= 0)
+            return false;
+
+        GridContainerState sourceActualContainer = activeGridDrag.sourceIsPopup
+            ? (openedContainerRuntimeData != null ? openedContainerRuntimeData.StoredContainerState : null)
+            : GetActualContainerState(activeGridDrag.sourceContainerKind);
+        if (sourceActualContainer == null)
+            return false;
+
+        GridItemPlacement sourceActualPlacement = FindActualDragSourcePlacement(sourceActualContainer);
+        if (sourceActualPlacement == null || sourceActualPlacement.IsEmpty)
+            return false;
+
+        GridItemPlacement targetPlacement = target.actualContainer.GetPlacementAtCell(target.row, target.column);
+        if (targetPlacement == null || targetPlacement.IsEmpty)
+            return false;
+
+        if (ReferenceEquals(targetPlacement, sourceActualPlacement))
+            return true;
+
+        return targetPlacement.Row == target.row
+            && targetPlacement.Column == target.column
+            && targetPlacement.CanMerge(activeGridDrag.item)
+            && targetPlacement.RemainingCapacityFor(activeGridDrag.item) > 0;
+    }
+
+    private bool TryMergeDraggedActualPlacementAtTarget(
+        GridDropTarget target,
+        GridContainerState sourceActualContainer,
+        GridItemPlacement sourceActualPlacement)
+    {
+        if (activeGridDrag == null || activeGridDrag.item == null || !activeGridDrag.item.canStack)
+            return false;
+
+        if (target.actualContainer == null || sourceActualContainer == null || sourceActualPlacement == null || sourceActualPlacement.IsEmpty)
+            return false;
+
+        GridItemPlacement targetPlacement = target.actualContainer.GetPlacementAtCell(target.row, target.column);
+        if (targetPlacement == null || targetPlacement.IsEmpty)
+            return false;
+
+        if (ReferenceEquals(targetPlacement, sourceActualPlacement))
+            return true;
+
+        if (targetPlacement.Row != target.row || targetPlacement.Column != target.column)
+            return false;
+
+        int acceptedQuantity = targetPlacement.Add(activeGridDrag.item, sourceActualPlacement.Quantity);
+        if (acceptedQuantity <= 0)
+            return false;
+
+        sourceActualPlacement.Remove(acceptedQuantity);
+        if (sourceActualPlacement.IsEmpty)
+            sourceActualContainer.TryRemovePlacement(sourceActualPlacement);
+
+        return true;
+    }
+
     private bool TryMoveDraggedPlacement(GridDropTarget target)
     {
         if (activeGridDrag == null)
@@ -4617,6 +6358,9 @@ public class GameplayUIRoot : MonoBehaviour
 
         if (activeGridDrag.sourceIsEquipment)
             return TryMoveEquipmentDraggedPlacementToContainer(target);
+
+        if (activeGridDrag.sourceIsCorpseEquipment)
+            return TryMoveCorpseEquipmentDraggedPlacementToContainer(target);
 
         return activeGridDrag.sourceSlotIndex >= 0
             ? TryMoveMirroredDraggedPlacement(target)
@@ -4630,6 +6374,9 @@ public class GameplayUIRoot : MonoBehaviour
 
         if (activeGridDrag.sourceIsEquipment)
             return slotType == activeGridDrag.sourceEquipmentSlotType;
+
+        if (activeGridDrag.sourceIsCorpseEquipment)
+            return TryMoveCorpseEquipmentDraggedPlacementToEquipment(slotType);
 
         InventorySlot targetSlot = equipment.GetSlot(slotType);
         if (targetSlot == null || !targetSlot.IsEmpty || !equipment.CanEquip(slotType, activeGridDrag.item))
@@ -4685,7 +6432,7 @@ public class GameplayUIRoot : MonoBehaviour
                 sourceSlot.Quantity,
                 target.row,
                 target.column,
-                false,
+                activeGridDrag.rotated,
                 null))
         {
             return false;
@@ -4696,8 +6443,77 @@ public class GameplayUIRoot : MonoBehaviour
         ItemRuntimeData runtimeData = sourceSlot.GetRuntimeDataForTransfer(quantity);
         sourceSlot.Clear();
 
-        if (target.actualContainer.TryPlaceItemAt(item, quantity, target.row, target.column, runtimeData, out _, false))
+        if (target.actualContainer.TryPlaceItemAt(item, quantity, target.row, target.column, runtimeData, out _, activeGridDrag.rotated))
+        {
+            CloseContainerPopupIfDroppedItem(runtimeData);
             return true;
+        }
+
+        sourceSlot.TrySet(item, quantity, runtimeData);
+        return false;
+    }
+
+    private bool TryMoveCorpseEquipmentDraggedPlacementToEquipment(EquipmentSlotType targetSlotType)
+    {
+        if (activeGridDrag == null || !activeGridDrag.sourceIsCorpseEquipment || openedCorpseLoot == null || equipment == null)
+            return false;
+
+        InventorySlot targetSlot = equipment.GetSlot(targetSlotType);
+        InventorySlot sourceSlot = openedCorpseLoot.GetSlot(activeGridDrag.sourceCorpseEquipmentSlotType);
+        if (sourceSlot == null || sourceSlot.IsEmpty || sourceSlot.Item == null || targetSlot == null)
+            return false;
+
+        if (!targetSlot.IsEmpty || !equipment.CanEquip(targetSlotType, sourceSlot.Item))
+            return false;
+
+        ItemDefinition item = sourceSlot.Item;
+        int quantity = sourceSlot.Quantity;
+        ItemRuntimeData runtimeData = sourceSlot.GetRuntimeDataForTransfer(quantity);
+        sourceSlot.Clear();
+
+        if (targetSlot.TrySet(item, quantity, runtimeData))
+        {
+            CloseContainerPopupIfEquippedItem(item, runtimeData);
+            return true;
+        }
+
+        sourceSlot.TrySet(item, quantity, runtimeData);
+        return false;
+    }
+
+    private bool TryMoveCorpseEquipmentDraggedPlacementToContainer(GridDropTarget target)
+    {
+        if (activeGridDrag == null || !activeGridDrag.sourceIsCorpseEquipment || openedCorpseLoot == null || target.actualContainer == null)
+            return false;
+
+        if (IsDraggingCorpseEquipmentIntoOwnContainer(target))
+            return false;
+
+        InventorySlot sourceSlot = openedCorpseLoot.GetSlot(activeGridDrag.sourceCorpseEquipmentSlotType);
+        if (sourceSlot == null || sourceSlot.IsEmpty || sourceSlot.Item == null)
+            return false;
+
+        if (!target.actualContainer.CanPlaceStrict(
+                sourceSlot.Item,
+                sourceSlot.Quantity,
+                target.row,
+                target.column,
+                activeGridDrag.rotated,
+                null))
+        {
+            return false;
+        }
+
+        ItemDefinition item = sourceSlot.Item;
+        int quantity = sourceSlot.Quantity;
+        ItemRuntimeData runtimeData = sourceSlot.GetRuntimeDataForTransfer(quantity);
+        sourceSlot.Clear();
+
+        if (target.actualContainer.TryPlaceItemAt(item, quantity, target.row, target.column, runtimeData, out _, activeGridDrag.rotated))
+        {
+            CloseContainerPopupIfDroppedItem(runtimeData);
+            return true;
+        }
 
         sourceSlot.TrySet(item, quantity, runtimeData);
         return false;
@@ -4720,6 +6536,20 @@ public class GameplayUIRoot : MonoBehaviour
         return false;
     }
 
+    private bool IsDraggingCorpseEquipmentIntoOwnContainer(GridDropTarget target)
+    {
+        if (activeGridDrag == null || !activeGridDrag.sourceIsCorpseEquipment || activeGridDrag.item == null)
+            return false;
+
+        if (target.actualContainer == null)
+            return false;
+
+        if (activeGridDrag.runtimeData == null || activeGridDrag.runtimeData.StoredContainerState == null)
+            return false;
+
+        return ReferenceEquals(target.actualContainer, activeGridDrag.runtimeData.StoredContainerState);
+    }
+
     private bool TryMoveMirroredDraggedPlacement(GridDropTarget target)
     {
         if (activeGridDrag == null || target.isPopup || target.displayContainer == null || activeGridDrag.item == null)
@@ -4731,7 +6561,8 @@ public class GameplayUIRoot : MonoBehaviour
 
         if (target.containerKind == activeGridDrag.sourceContainerKind &&
             target.row == sourceDisplayPlacement.Row &&
-            target.column == sourceDisplayPlacement.Column)
+            target.column == sourceDisplayPlacement.Column &&
+            activeGridDrag.rotated == sourceDisplayPlacement.Rotated)
         {
             return true;
         }
@@ -4776,19 +6607,17 @@ public class GameplayUIRoot : MonoBehaviour
 
         if (ReferenceEquals(target.actualContainer, sourceActualContainer) &&
             target.row == sourceActualPlacement.Row &&
-            target.column == sourceActualPlacement.Column)
+            target.column == sourceActualPlacement.Column &&
+            activeGridDrag.rotated == sourceActualPlacement.Rotated)
         {
             return true;
         }
 
+        if (TryMergeDraggedActualPlacementAtTarget(target, sourceActualContainer, sourceActualPlacement))
+            return true;
+
         GridContainerState occupancyContainer = target.displayContainer ?? target.actualContainer;
-        GridItemPlacement ignoredPlacement = null;
-        if (ReferenceEquals(target.actualContainer, sourceActualContainer))
-        {
-            ignoredPlacement = activeGridDrag.sourceIsPopup
-                ? sourceActualPlacement
-                : FindDisplayPlacementByRuntimeId(activeGridDrag.sourceContainerKind, activeGridDrag.runtimeInstanceId);
-        }
+        GridItemPlacement ignoredPlacement = FindIgnoredDragPlacementForTarget(target, sourceActualContainer, sourceActualPlacement);
 
         if (!occupancyContainer.CanPlaceStrict(
                 activeGridDrag.item,
@@ -4823,7 +6652,7 @@ public class GameplayUIRoot : MonoBehaviour
             activeGridDrag.sourceColumn,
             activeGridDrag.runtimeData,
             out _,
-            activeGridDrag.rotated);
+            activeGridDrag.sourceRotated);
         return false;
     }
 
@@ -4845,7 +6674,66 @@ public class GameplayUIRoot : MonoBehaviour
             if (placement.Item == activeGridDrag.item &&
                 placement.Row == activeGridDrag.sourceRow &&
                 placement.Column == activeGridDrag.sourceColumn &&
-                placement.Rotated == activeGridDrag.rotated)
+                placement.Rotated == activeGridDrag.sourceRotated)
+            {
+                return placement;
+            }
+        }
+
+        return null;
+    }
+
+    private GridItemPlacement FindIgnoredDragPlacementForTarget(
+        GridDropTarget target,
+        GridContainerState sourceActualContainer,
+        GridItemPlacement sourceActualPlacement)
+    {
+        if (activeGridDrag == null || target.actualContainer == null || sourceActualContainer == null)
+            return null;
+
+        if (!ReferenceEquals(target.actualContainer, sourceActualContainer))
+            return null;
+
+        GridContainerState occupancyContainer = target.displayContainer ?? target.actualContainer;
+        if (occupancyContainer == null)
+            return null;
+
+        if (ReferenceEquals(occupancyContainer, sourceActualContainer))
+            return sourceActualPlacement;
+
+        GridItemPlacement displayPlacement = FindDisplayPlacementByRuntimeId(
+            activeGridDrag.sourceContainerKind,
+            activeGridDrag.runtimeInstanceId);
+
+        if (displayPlacement != null)
+            return displayPlacement;
+
+        return FindMatchingPlacement(occupancyContainer, sourceActualPlacement);
+    }
+
+    private static GridItemPlacement FindMatchingPlacement(GridContainerState container, GridItemPlacement sourcePlacement)
+    {
+        if (container == null || sourcePlacement == null || sourcePlacement.IsEmpty)
+            return null;
+
+        if (!string.IsNullOrWhiteSpace(sourcePlacement.RuntimeInstanceId))
+        {
+            GridItemPlacement runtimePlacement = FindRuntimePlacement(container, sourcePlacement.RuntimeInstanceId);
+            if (runtimePlacement != null)
+                return runtimePlacement;
+        }
+
+        IReadOnlyList<GridItemPlacement> placements = container.Placements;
+        for (int i = 0; i < placements.Count; i++)
+        {
+            GridItemPlacement placement = placements[i];
+            if (placement == null || placement.IsEmpty)
+                continue;
+
+            if (placement.Item == sourcePlacement.Item &&
+                placement.Row == sourcePlacement.Row &&
+                placement.Column == sourcePlacement.Column &&
+                placement.Rotated == sourcePlacement.Rotated)
             {
                 return placement;
             }
@@ -4871,10 +6759,16 @@ public class GameplayUIRoot : MonoBehaviour
         if (!TryGetPointerScreenPosition(out Vector2 pointerPosition))
             return;
 
+        if (itemInspectPanel != null && itemInspectPanel.IsPointerOver(pointerPosition))
+            return;
+
         if (TryOpenBackpackContextMenuAt(pointerPosition))
             return;
 
         if (TryOpenEquipmentContextMenuAt(pointerPosition))
+            return;
+
+        if (TryOpenCorpseEquipmentContextMenuAt(pointerPosition))
             return;
 
         if (contextMenuPanel != null && contextMenuPanel.gameObject.activeSelf)
@@ -4897,6 +6791,9 @@ public class GameplayUIRoot : MonoBehaviour
             return true;
 
         if (TryOpenExternalContainerContextMenuAt(screenPosition, eventCamera))
+            return true;
+
+        if (TryOpenCorpsePocketContextMenuAt(screenPosition, eventCamera))
             return true;
 
         foreach (GridContainerView containerView in gridContainerViews.Values)
@@ -4962,6 +6859,9 @@ public class GameplayUIRoot : MonoBehaviour
             return true;
 
         if (TryOpenExternalContainerContextMenuAtGui(guiPosition))
+            return true;
+
+        if (TryOpenCorpsePocketContextMenuAtGui(guiPosition))
             return true;
 
         foreach (GridContainerView containerView in gridContainerViews.Values)
@@ -5083,6 +6983,65 @@ public class GameplayUIRoot : MonoBehaviour
         return false;
     }
 
+    private bool TryOpenCorpsePocketContextMenuAt(Vector2 screenPosition, Camera eventCamera)
+    {
+        if (corpsePocketView == null || corpseLootPanel == null || !corpseLootPanel.gameObject.activeInHierarchy)
+            return false;
+
+        GridContainerState container = GetActualContainerState(GridContainerKind.CorpsePocket);
+        if (container == null)
+            return false;
+
+        for (int i = 0; i < corpsePocketView.placementViews.Count; i++)
+        {
+            GridPlacementView placementView = corpsePocketView.placementViews[i];
+            if (placementView?.rect == null)
+                continue;
+
+            if (!RectTransformUtility.RectangleContainsScreenPoint(placementView.rect, screenPosition, eventCamera))
+                continue;
+
+            GridItemPlacement placement = FindPlacementForView(container, placementView);
+            if (placement == null || placement.IsEmpty)
+                return false;
+
+            OpenContextMenuForCarryPlacement(GridContainerKind.CorpsePocket, placement, screenPosition);
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryOpenCorpsePocketContextMenuAtGui(Vector2 guiPosition)
+    {
+        if (corpsePocketView == null || corpseLootPanel == null || !corpseLootPanel.gameObject.activeInHierarchy)
+            return false;
+
+        GridContainerState container = GetActualContainerState(GridContainerKind.CorpsePocket);
+        if (container == null)
+            return false;
+
+        for (int i = 0; i < corpsePocketView.placementViews.Count; i++)
+        {
+            GridPlacementView placementView = corpsePocketView.placementViews[i];
+            if (!TryGetGuiRect(placementView?.rect, out Rect guiRect))
+                continue;
+
+            if (!guiRect.Contains(guiPosition))
+                continue;
+
+            GridItemPlacement placement = FindPlacementForView(container, placementView);
+            if (placement == null || placement.IsEmpty)
+                return false;
+
+            Vector2 screenPosition = new Vector2(guiPosition.x, Screen.height - guiPosition.y);
+            OpenContextMenuForCarryPlacement(GridContainerKind.CorpsePocket, placement, screenPosition);
+            return true;
+        }
+
+        return false;
+    }
+
     private bool TryOpenContainerPopupContextMenuAt(Vector2 screenPosition, Camera eventCamera)
     {
         if (containerPopupPanel == null || !containerPopupPanel.gameObject.activeSelf || containerPopupView == null)
@@ -5196,6 +7155,60 @@ public class GameplayUIRoot : MonoBehaviour
         return false;
     }
 
+    private bool TryOpenCorpseEquipmentContextMenuAt(Vector2 screenPosition)
+    {
+        if (openedCorpseLoot == null || corpseLootPanel == null || !corpseLootPanel.gameObject.activeInHierarchy)
+            return false;
+
+        Camera eventCamera = rootCanvas != null && rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? rootCanvas.worldCamera
+            : null;
+
+        foreach (KeyValuePair<EquipmentSlotType, SlotView> pair in corpseEquipmentSlotViews)
+        {
+            SlotView slotView = pair.Value;
+            if (slotView?.rect == null)
+                continue;
+
+            if (!RectTransformUtility.RectangleContainsScreenPoint(slotView.rect, screenPosition, eventCamera))
+                continue;
+
+            InventorySlot slot = openedCorpseLoot.GetSlot(pair.Key);
+            if (slot == null || slot.IsEmpty)
+                return false;
+
+            OpenContextMenuForCorpseEquipmentSlot(pair.Key, screenPosition);
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryOpenCorpseEquipmentContextMenuAtGui(Vector2 guiPosition)
+    {
+        if (openedCorpseLoot == null || corpseLootPanel == null || !corpseLootPanel.gameObject.activeInHierarchy)
+            return false;
+
+        foreach (KeyValuePair<EquipmentSlotType, SlotView> pair in corpseEquipmentSlotViews)
+        {
+            if (!TryGetGuiRect(pair.Value?.rect, out Rect guiRect))
+                continue;
+
+            if (!guiRect.Contains(guiPosition))
+                continue;
+
+            InventorySlot slot = openedCorpseLoot.GetSlot(pair.Key);
+            if (slot == null || slot.IsEmpty)
+                return false;
+
+            Vector2 screenPosition = new Vector2(guiPosition.x, Screen.height - guiPosition.y);
+            OpenContextMenuForCorpseEquipmentSlot(pair.Key, screenPosition);
+            return true;
+        }
+
+        return false;
+    }
+
     private bool WasRightPointerPressedThisFrame()
     {
         if (Input.GetMouseButtonDown(1))
@@ -5227,6 +7240,18 @@ public class GameplayUIRoot : MonoBehaviour
 
 #if ENABLE_INPUT_SYSTEM
         return Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame;
+#else
+        return false;
+#endif
+    }
+
+    private bool WasGridRotatePressedThisFrame()
+    {
+        if (Input.GetKeyDown(KeyCode.R))
+            return true;
+
+#if ENABLE_INPUT_SYSTEM
+        return Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame;
 #else
         return false;
 #endif
@@ -5332,6 +7357,9 @@ public class GameplayUIRoot : MonoBehaviour
         if (panel == null || rootCanvas == null)
             return;
 
+        if (panel == contextMenuPanel)
+            ResizeContextMenuToVisibleButtons();
+
         RectTransform parentRect = panel.parent as RectTransform;
         if (parentRect == null)
             return;
@@ -5352,6 +7380,45 @@ public class GameplayUIRoot : MonoBehaviour
         anchoredPosition.y = Mathf.Clamp(anchoredPosition.y, -Mathf.Max(0f, canvasSize.y - panelSize.y), 0f);
 
         panel.anchoredPosition = anchoredPosition;
+    }
+
+    private void SetContextButtonHeight(Button button)
+    {
+        if (button == null)
+            return;
+
+        LayoutElement element = button.GetComponent<LayoutElement>();
+        if (element == null)
+            element = button.gameObject.AddComponent<LayoutElement>();
+
+        element.preferredHeight = 34f;
+        element.flexibleHeight = 0f;
+    }
+
+    private void ResizeContextMenuToVisibleButtons()
+    {
+        if (contextMenuPanel == null)
+            return;
+
+        VerticalLayoutGroup layout = contextMenuPanel.GetComponent<VerticalLayoutGroup>();
+        float padding = layout != null ? layout.padding.top + layout.padding.bottom : 12f;
+        float spacing = layout != null ? layout.spacing : 6f;
+        int visibleButtonCount = 0;
+
+        if (contextPrimaryButton != null && contextPrimaryButton.gameObject.activeSelf)
+            visibleButtonCount++;
+        if (contextSecondaryButton != null && contextSecondaryButton.gameObject.activeSelf)
+            visibleButtonCount++;
+        if (contextInspectButton != null && contextInspectButton.gameObject.activeSelf)
+            visibleButtonCount++;
+        if (contextSplitButton != null && contextSplitButton.gameObject.activeSelf)
+            visibleButtonCount++;
+        if (contextDropButton != null && contextDropButton.gameObject.activeSelf)
+            visibleButtonCount++;
+
+        float height = padding + visibleButtonCount * 34f + Mathf.Max(0, visibleButtonCount - 1) * spacing;
+        contextMenuPanel.sizeDelta = new Vector2(contextMenuPanel.sizeDelta.x, Mathf.Max(46f, height));
+        LayoutRebuilder.ForceRebuildLayoutImmediate(contextMenuPanel);
     }
 
     private bool TryGetGuiRect(RectTransform rect, out Rect guiRect)
@@ -5421,6 +7488,28 @@ public class GameplayUIRoot : MonoBehaviour
         InventorySlotWidget widget = slotRect.gameObject.AddComponent<InventorySlotWidget>();
         widget.Configure(this, (int)slotType, InventorySlotWidgetMode.Equipment);
         equipmentSlotViews[slotType] = slotView;
+    }
+
+    private void CreateCorpseEquipmentSlot(RectTransform parent, EquipmentSlotType slotType, Vector2 anchoredPosition, Vector2 size)
+    {
+        RectTransform slotRect = CreateRect("CorpseEquipmentSlot_" + slotType, parent, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), size);
+        slotRect.anchoredPosition = anchoredPosition;
+
+        Image image = slotRect.gameObject.AddComponent<Image>();
+        image.color = GetEquipmentSlotEmptyColor(slotType);
+
+        SlotView slotView = CreateSlotView(slotRect, GetEquipmentSlotLabel(slotType));
+        ApplyEquipmentSlotTextLayout(slotView, slotType, size);
+        if (slotView.iconRect != null)
+        {
+            float iconWidth = Mathf.Max(66f, size.x - 24f);
+            float iconHeight = Mathf.Max(58f, size.y - 36f);
+            slotView.iconRect.sizeDelta = new Vector2(iconWidth, iconHeight);
+            slotView.iconRect.anchoredPosition = new Vector2(0f, -2f);
+        }
+
+        ApplyEquipmentSlotIconPresentation(slotView, slotType, null);
+        corpseEquipmentSlotViews[slotType] = slotView;
     }
 
     private void ApplyEquipmentSlotIconPresentation(SlotView slotView, EquipmentSlotType slotType, ItemDefinition item)
@@ -5612,22 +7701,26 @@ public class GameplayUIRoot : MonoBehaviour
 
     private Color GetInventorySlotColor(ItemDefinition item)
     {
-        if (item is WeaponItemDefinition)
-            return new Color(0.23f, 0.26f, 0.31f, 0.98f);
-
-        if (item is ArmorItemDefinition)
-            return new Color(0.21f, 0.28f, 0.22f, 0.98f);
-
-        if (item is ContainerItemDefinition)
-            return new Color(0.21f, 0.24f, 0.28f, 0.98f);
-
-        if (item is AmmoItemDefinition)
-            return new Color(0.28f, 0.22f, 0.16f, 0.98f);
-
-        if (item is MedicalItemDefinition)
-            return new Color(0.18f, 0.28f, 0.23f, 0.98f);
+        if (item != null)
+            return GetValueTierColor(item.valueTier);
 
         return new Color(0.19f, 0.22f, 0.27f, 0.98f);
+    }
+
+    private static Color GetValueTierColor(ItemValueTier valueTier)
+    {
+        return valueTier switch
+        {
+            ItemValueTier.Gold => ValueTierGoldColor,
+            ItemValueTier.Red => ValueTierRedColor,
+            _ => ValueTierBlueColor
+        };
+    }
+
+    private static Color WithAlpha(Color color, float alpha)
+    {
+        color.a = alpha;
+        return color;
     }
 
     private Color GetEquipmentSlotEmptyColor(EquipmentSlotType slotType)
@@ -5643,19 +7736,14 @@ public class GameplayUIRoot : MonoBehaviour
 
     private Color GetEquipmentSlotFilledColor(EquipmentSlotType slotType, ItemDefinition item)
     {
-        if (slotType == EquipmentSlotType.PrimaryWeapon || slotType == EquipmentSlotType.SecondaryWeapon)
-            return new Color(0.20f, 0.20f, 0.24f, 0.98f);
-
-        if (item is ArmorItemDefinition)
-            return new Color(0.20f, 0.24f, 0.20f, 0.98f);
-
-        return new Color(0.19f, 0.22f, 0.27f, 0.98f);
+        return GetInventorySlotColor(item);
     }
 
     private void ClearContextSelection()
     {
         selectedBackpackSlotIndex = -1;
         selectedEquipmentSlotTypeIndex = -1;
+        selectedCorpseEquipmentSlotTypeIndex = -1;
         selectedCarryRuntimeInstanceId = string.Empty;
         selectedPopupRuntimeInstanceId = string.Empty;
         selectedCarryRow = -1;
@@ -5667,6 +7755,7 @@ public class GameplayUIRoot : MonoBehaviour
         selectedPopupRotated = false;
         selectedPopupItem = null;
         contextMenuTargetsEquipmentSlot = false;
+        contextMenuTargetsCorpseEquipmentSlot = false;
         contextMenuTargetsCarryPlacement = false;
         contextMenuTargetsPopupPlacement = false;
     }

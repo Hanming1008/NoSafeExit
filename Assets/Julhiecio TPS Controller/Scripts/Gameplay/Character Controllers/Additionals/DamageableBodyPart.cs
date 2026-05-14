@@ -27,13 +27,13 @@ namespace JUTPS.ArmorSystem
 
             damageInfo.Damage *= DamageMultiplier;
 
-            Health.DoDamage(damageInfo);
+            float appliedDamage = Health.DoDamage(damageInfo);
             if (ArmorProtecting != null && ArmorProtecting.enabled)
             {
-                ArmorProtecting.DoDamageOnArmor(damageInfo.Damage);
+                ArmorProtecting.DoDamageOnArmor(appliedDamage);
             }
 
-            return damageInfo.Damage;
+            return appliedDamage;
         }
     }
 

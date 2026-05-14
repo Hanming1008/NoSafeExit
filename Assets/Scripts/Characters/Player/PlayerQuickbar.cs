@@ -61,7 +61,7 @@ public class PlayerQuickbar : MonoBehaviour
 
     public bool CanAssign(ItemDefinition item)
     {
-        return item is MedicalItemDefinition;
+        return item is MedicalItemDefinition || item is ConsumableItemDefinition;
     }
 
     public bool TryAssignItem(int slotIndex, ItemDefinition item)

@@ -295,7 +295,7 @@ namespace JUTPS
 
                 if (health)
                 {
-                    health.DoDamage(damageInfo);
+                    realDamage = health.DoDamage(damageInfo);
                     if (ShowHitMarker)
                         if (!health.IsDead && realDamage > 0)
                             HitMarkerEffect.HitCheck(health.transform.tag, point, realDamage);

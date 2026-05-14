@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8bca985a8299b0b41bcb2d4af9468d58, type: 3}
+  m_Name: Armor_Body_LevelIII
+  m_EditorClassIdentifier: Assembly-CSharp::ArmorItemDefinition
+  itemId: armor_body_level_iii
+  displayName: Level III Body Armor
+  description: Heavy body armor with high torso protection and expanded rig storage.
+  icon: {fileID: 21300000, guid: 78e7668e69393ab47ae7dec08ee81259, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: 78e7668e69393ab47ae7dec08ee81259,
+    type: 3}
+  worldPrefab: {fileID: 0}
+  valueTier: 1
+  moneyValue: 4000
+  weight: 8.8
+  canStack: 0
+  maxStackSize: 1
+  inventoryRows: 4
+  inventoryColumns: 4
+  canRotateInGrid: 0
+  armorSlot: 1
+  damageReduction: 0.45
+  maxDurability: 160
+  providedRigContainer: {fileID: 11400000, guid: b1d254de2c654b2c829573ff389451db,
+    type: 2}
+  equippedVisualPrefab: {fileID: 0}
+  equippedVisualObjectNames:
+  - LevelIII_SM_Chr_Attach_Grenade_Flash_01
+  - LevelIII_SM_Chr_Attach_Pouch_Mag_Double_01
+  - LevelIII_SM_Chr_Attach_Pouch_Mag_Double_01_1
+  - LevelIII_SM_Chr_Attach_Pouch_Mag_Double_01_2
+  - LevelIII_SM_Chr_Attach_Grenade_Flash_01 (1)
+  - LevelIII_SM_Chr_Attach_Pouch_06
+  - LevelIII_SM_Chr_Attach_Pouch_06 (1)
+  - LevelIII_SM_Chr_Attach_Padding_01
+  hiddenVisualObjectNames: []
+  worldVisualPrefabs: []

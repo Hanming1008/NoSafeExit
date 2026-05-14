@@ -19,7 +19,10 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: f360b731c4db8d34e9d1e2411b4cd692, type: 3}
   gridInventorySprite: {fileID: 21300000, guid: 3cbfe902b4e5de046a23c081e5c9a886,
     type: 3}
-  worldPrefab: {fileID: 0}
+  worldPrefab: {fileID: 1947799447395298, guid: 453850fd11c6f2f4abbc406c887fb90c,
+    type: 3}
+  valueTier: 0
+  moneyValue: 1000
   weight: 4.5
   canStack: 0
   maxStackSize: 1
@@ -28,7 +31,8 @@ MonoBehaviour:
   canRotateInGrid: 0
   weaponCategory: 0
   fireMode: 1
-  equippedPrefab: {fileID: 100100000, guid: 453850fd11c6f2f4abbc406c887fb90c, type: 3}
+  equippedPrefab: {fileID: 1947799447395298, guid: 453850fd11c6f2f4abbc406c887fb90c,
+    type: 3}
   compatibleAmmo: {fileID: 11400000, guid: 75a0a931484f17146bf1dc5079506f74, type: 2}
   usesAmmo: 1
   magazineSize: 30

@@ -90,11 +90,15 @@ public class PlayerEquipment : MonoBehaviour
         switch (slotType)
         {
             case EquipmentSlotType.PrimaryWeapon:
+                return item is WeaponItemDefinition primaryWeapon
+                    && primaryWeapon.weaponCategory != WeaponCategory.Pistol;
+
             case EquipmentSlotType.SecondaryWeapon:
-                return item is WeaponItemDefinition;
+                return item is WeaponItemDefinition secondaryWeapon
+                    && secondaryWeapon.weaponCategory == WeaponCategory.Pistol;
 
             case EquipmentSlotType.QuickUseMedical:
-                return item is MedicalItemDefinition;
+                return item is MedicalItemDefinition || item is ConsumableItemDefinition;
 
             case EquipmentSlotType.Backpack:
                 return item is ContainerItemDefinition container && container.containerKind == GridContainerKind.Backpack;
@@ -301,8 +305,11 @@ public class PlayerEquipment : MonoBehaviour
         if (item == null || requestedQuantity <= 0)
             return 0;
 
-        if (slotType == EquipmentSlotType.QuickUseMedical && item is MedicalItemDefinition)
+        if (slotType == EquipmentSlotType.QuickUseMedical &&
+            (item is MedicalItemDefinition || item is ConsumableItemDefinition))
+        {
             return item.canStack ? Mathf.Min(requestedQuantity, item.maxStackSize) : 1;
+        }
 
         return 1;
     }

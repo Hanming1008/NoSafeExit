@@ -217,7 +217,67 @@ public class GridContainerState
             return false;
 
         EnsurePlacementList();
-        if (!CanPlace(item, quantity, targetRow, targetColumn, rotated))
+
+        GridItemPlacement mergeTarget = GetPlacementAtCell(targetRow, targetColumn);
+        if (mergeTarget != null
+            && mergeTarget.Row == targetRow
+            && mergeTarget.Column == targetColumn
+            && mergeTarget.CanMerge(item)
+            && mergeTarget.RemainingCapacityFor(item) >= quantity
+            && runtimeData == null)
+        {
+            mergeTarget.Add(item, quantity);
+            placement = mergeTarget;
+            return true;
+        }
+
+        if (!CanPlaceStrict(item, quantity, targetRow, targetColumn, rotated))
+            return false;
+
+        placement = new GridItemPlacement();
+        if (!placement.TrySet(item, quantity, targetRow, targetColumn, rotated, runtimeData))
+        {
+            placement = null;
+            return false;
+        }
+
+        placements.Add(placement);
+        return true;
+    }
+
+    public bool TryMergeItemAt(ItemDefinition item, int quantity, int targetRow, int targetColumn, out int acceptedQuantity)
+    {
+        acceptedQuantity = 0;
+        if (item == null || quantity <= 0 || !item.canStack)
+            return false;
+
+        EnsurePlacementList();
+
+        GridItemPlacement targetPlacement = GetPlacementAtCell(targetRow, targetColumn);
+        if (targetPlacement == null || targetPlacement.Row != targetRow || targetPlacement.Column != targetColumn)
+            return false;
+
+        acceptedQuantity = targetPlacement.Add(item, quantity);
+        return acceptedQuantity > 0;
+    }
+
+    public bool TryPlaceNewItemNear(
+        ItemDefinition item,
+        int quantity,
+        int originRow,
+        int originColumn,
+        ItemRuntimeData runtimeData,
+        out GridItemPlacement placement,
+        bool rotated = false,
+        GridItemPlacement ignoredPlacement = null)
+    {
+        placement = null;
+        if (item == null || quantity <= 0)
+            return false;
+
+        EnsurePlacementList();
+
+        if (!TryFindNearestOpenPosition(item, rotated, originRow, originColumn, ignoredPlacement, out int targetRow, out int targetColumn))
             return false;
 
         placement = new GridItemPlacement();
@@ -239,10 +299,42 @@ public class GridContainerState
         return placements.Remove(placement);
     }
 
+    public int GetQuantity(ItemDefinition item, bool includeNestedContainers = true)
+    {
+        if (item == null)
+            return 0;
+
+        EnsurePlacementList();
+
+        int totalQuantity = 0;
+        for (int i = 0; i < placements.Count; i++)
+        {
+            GridItemPlacement placement = placements[i];
+            if (placement == null || placement.IsEmpty)
+                continue;
+
+            if (placement.Item == item)
+                totalQuantity += placement.Quantity;
+
+            if (!includeNestedContainers)
+                continue;
+
+            GridContainerState nestedContainer = placement.RuntimeData != null
+                ? placement.RuntimeData.StoredContainerState
+                : null;
+            if (nestedContainer != null)
+                totalQuantity += nestedContainer.GetQuantity(item, true);
+        }
+
+        return totalQuantity;
+    }
+
     public int RemoveItem(ItemDefinition item, int quantity)
     {
         if (item == null || quantity <= 0)
             return 0;
+
+        EnsurePlacementList();
 
         int remainingQuantity = quantity;
 
@@ -258,6 +350,72 @@ public class GridContainerState
         }
 
         return quantity - remainingQuantity;
+    }
+
+    public int RemoveItemIncludingNested(ItemDefinition item, int quantity)
+    {
+        if (item == null || quantity <= 0)
+            return 0;
+
+        int removedQuantity = RemoveItem(item, quantity);
+        int remainingQuantity = quantity - removedQuantity;
+        if (remainingQuantity <= 0)
+            return removedQuantity;
+
+        EnsurePlacementList();
+
+        for (int i = placements.Count - 1; i >= 0 && remainingQuantity > 0; i--)
+        {
+            GridItemPlacement placement = placements[i];
+            if (placement == null || placement.IsEmpty || placement.RuntimeData == null)
+                continue;
+
+            GridContainerState nestedContainer = placement.RuntimeData.StoredContainerState;
+            if (nestedContainer == null)
+                continue;
+
+            int nestedRemovedQuantity = nestedContainer.RemoveItemIncludingNested(item, remainingQuantity);
+            removedQuantity += nestedRemovedQuantity;
+            remainingQuantity -= nestedRemovedQuantity;
+        }
+
+        return removedQuantity;
+    }
+
+    public bool TryFindFirstPlacement(
+        ItemDefinition item,
+        out GridContainerState sourceContainer,
+        out GridItemPlacement sourcePlacement)
+    {
+        sourceContainer = null;
+        sourcePlacement = null;
+
+        if (item == null)
+            return false;
+
+        EnsurePlacementList();
+
+        for (int i = 0; i < placements.Count; i++)
+        {
+            GridItemPlacement placement = placements[i];
+            if (placement == null || placement.IsEmpty)
+                continue;
+
+            if (placement.Item == item)
+            {
+                sourceContainer = this;
+                sourcePlacement = placement;
+                return true;
+            }
+
+            GridContainerState nestedContainer = placement.RuntimeData != null
+                ? placement.RuntimeData.StoredContainerState
+                : null;
+            if (nestedContainer != null && nestedContainer.TryFindFirstPlacement(item, out sourceContainer, out sourcePlacement))
+                return true;
+        }
+
+        return false;
     }
 
     public void Clear()
@@ -299,12 +457,58 @@ public class GridContainerState
         {
             for (int column = 0; column <= columnCount - columnSpan; column++)
             {
-                if (!CanPlace(item, 1, row, column, rotated))
+                if (!CanPlaceStrict(item, 1, row, column, rotated))
                     continue;
 
                 targetRow = row;
                 targetColumn = column;
                 return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryFindNearestOpenPosition(
+        ItemDefinition item,
+        bool rotated,
+        int originRow,
+        int originColumn,
+        GridItemPlacement ignoredPlacement,
+        out int targetRow,
+        out int targetColumn)
+    {
+        targetRow = -1;
+        targetColumn = -1;
+
+        int rowSpan = GridItemPlacement.GetRowSpan(item, rotated);
+        int columnSpan = GridItemPlacement.GetColumnSpan(item, rotated);
+        int maxRow = rowCount - rowSpan;
+        int maxColumn = columnCount - columnSpan;
+        if (maxRow < 0 || maxColumn < 0)
+            return false;
+
+        int clampedOriginRow = Mathf.Clamp(originRow, 0, maxRow);
+        int clampedOriginColumn = Mathf.Clamp(originColumn, 0, maxColumn);
+        int maxDistance = rowCount + columnCount;
+
+        for (int distance = 0; distance <= maxDistance; distance++)
+        {
+            for (int row = 0; row <= maxRow; row++)
+            {
+                for (int column = 0; column <= maxColumn; column++)
+                {
+                    int manhattan = Mathf.Abs(row - clampedOriginRow) + Mathf.Abs(column - clampedOriginColumn);
+                    if (manhattan != distance)
+                        continue;
+
+                    if (!CanPlaceStrict(item, 1, row, column, rotated, ignoredPlacement))
+                        continue;
+
+                    targetRow = row;
+                    targetColumn = column;
+                    return true;
+                }
             }
         }
 

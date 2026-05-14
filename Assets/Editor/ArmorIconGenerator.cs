@@ -18,8 +18,18 @@ public static class ArmorIconGenerator
 
         GenerateChestRigIcon(
             "Assets/Synty/PolygonMilitary/Prefabs/Characters/Alt_Soldiers/SM_Chr_Soldier_Female_01_Alt_02.prefab",
-            "Assets/Data/Items/Debug/Debug_Chest_Rig.asset",
-            OutputFolder + "/Icon_ChestRig_Operator.png");
+            "Assets/Data/Items/Armor/Armor_Body_LevelI.asset",
+            OutputFolder + "/Icon_BodyArmor_LevelI.png");
+
+        GenerateActiveAttachmentIcon(
+            "Assets/Synty/PolygonMilitary/Prefabs/Characters/Alt_Soldiers/SM_Chr_Soldier_Male_02_Alt_03.prefab",
+            "Assets/Data/Items/Armor/Armor_Body_LevelII.asset",
+            OutputFolder + "/Icon_BodyArmor_LevelII.png");
+
+        GenerateActiveAttachmentIcon(
+            "Assets/Synty/PolygonMilitary/Prefabs/Characters/Alt_Soldiers/SM_Chr_Soldier_Male_01_Alt_01.prefab",
+            "Assets/Data/Items/Armor/Armor_Body_LevelIII.asset",
+            OutputFolder + "/Icon_BodyArmor_LevelIII.png");
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -72,6 +82,7 @@ public static class ArmorIconGenerator
                 if (found == null)
                     continue;
 
+                SetHierarchyActive(found);
                 enabledRoots.Add(found);
                 foreach (var renderer in found.GetComponentsInChildren<Renderer>(true))
                     renderer.enabled = true;
@@ -79,6 +90,139 @@ public static class ArmorIconGenerator
 
             if (enabledRoots.Count == 0)
                 throw new InvalidOperationException("No visual roots found for " + armorAsset.displayName);
+
+            var bounds = CalculateEnabledBounds(allRenderers, instance.transform.position);
+            bool cropToUpperBody = armorAssetPath.IndexOf("Armor_Body_Level", StringComparison.OrdinalIgnoreCase) >= 0;
+            var center = bounds.center + (cropToUpperBody
+                ? new Vector3(0f, bounds.extents.y * 0.24f, 0f)
+                : new Vector3(0f, 0.02f, 0f));
+            var extents = bounds.extents;
+
+            cameraGo = new GameObject("TEMP_ARMOR_CAMERA_" + armorAsset.name)
+            {
+                hideFlags = HideFlags.HideAndDontSave
+            };
+
+            var camera = cameraGo.AddComponent<Camera>();
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color(0f, 0f, 0f, 0f);
+            camera.cullingMask = 1 << 31;
+            camera.allowHDR = false;
+            camera.allowMSAA = true;
+            camera.orthographic = true;
+            camera.nearClipPlane = 0.01f;
+            camera.farClipPlane = 50f;
+            camera.aspect = 1f;
+            camera.orthographicSize = cropToUpperBody
+                ? Mathf.Max(0.25f, extents.y * 0.52f)
+                : Mathf.Max(extents.y, extents.x) * 1.18f;
+            cameraGo.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+            cameraGo.transform.position = center - (cameraGo.transform.forward * 4f);
+
+            keyLightGo = CreateLight("TEMP_ARMOR_KEY_" + armorAsset.name, new Vector3(35f, 150f, 0f), 0.84f, new Color(0.86f, 0.88f, 0.92f));
+            fillLightGo = CreateLight("TEMP_ARMOR_FILL_" + armorAsset.name, new Vector3(330f, 300f, 0f), 0.18f, new Color(0.62f, 0.66f, 0.74f));
+
+            renderTexture = new RenderTexture(512, 512, 24, RenderTextureFormat.ARGB32)
+            {
+                antiAliasing = 4
+            };
+            renderTexture.Create();
+            camera.targetTexture = renderTexture;
+            camera.Render();
+
+            var previousActive = RenderTexture.active;
+            RenderTexture.active = renderTexture;
+            texture = new Texture2D(512, 512, TextureFormat.ARGB32, false);
+            texture.ReadPixels(new Rect(0, 0, 512, 512), 0, 0);
+            texture.Apply();
+            RenderTexture.active = previousActive;
+
+            File.WriteAllBytes(GetAbsoluteProjectPath(outputPath), texture.EncodeToPNG());
+            AssetDatabase.ImportAsset(outputPath, ImportAssetOptions.ForceUpdate);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(outputPath);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(outputPath);
+            armorAsset.icon = sprite;
+            armorAsset.gridInventorySprite = sprite;
+            EditorUtility.SetDirty(armorAsset);
+        }
+        finally
+        {
+            if (instance != null)
+                Object.DestroyImmediate(instance);
+            if (cameraGo != null)
+                Object.DestroyImmediate(cameraGo);
+            if (keyLightGo != null)
+                Object.DestroyImmediate(keyLightGo);
+            if (fillLightGo != null)
+                Object.DestroyImmediate(fillLightGo);
+            if (renderTexture != null)
+            {
+                renderTexture.Release();
+                Object.DestroyImmediate(renderTexture);
+            }
+            if (texture != null)
+                Object.DestroyImmediate(texture);
+        }
+    }
+
+    private static void GenerateActiveAttachmentIcon(string sourceCharacterPrefabPath, string armorAssetPath, string outputPath)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(sourceCharacterPrefabPath);
+        var armorAsset = AssetDatabase.LoadAssetAtPath<ArmorItemDefinition>(armorAssetPath);
+
+        if (prefab == null)
+            throw new InvalidOperationException("Missing prefab at " + sourceCharacterPrefabPath);
+
+        if (armorAsset == null)
+            throw new InvalidOperationException("Missing armor asset at " + armorAssetPath);
+
+        GameObject instance = null;
+        GameObject cameraGo = null;
+        GameObject keyLightGo = null;
+        GameObject fillLightGo = null;
+        RenderTexture renderTexture = null;
+        Texture2D texture = null;
+
+        try
+        {
+            instance = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+            if (instance == null)
+                throw new InvalidOperationException("Could not instantiate prefab " + sourceCharacterPrefabPath);
+
+            instance.name = "TEMP_ARMOR_ATTACHMENT_ICON_" + armorAsset.name;
+            instance.hideFlags = HideFlags.HideAndDontSave;
+            SetLayerRecursively(instance, 31);
+
+            var allRenderers = instance.GetComponentsInChildren<Renderer>(true);
+            foreach (var renderer in allRenderers)
+            {
+                renderer.enabled = false;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            int enabledCount = 0;
+            foreach (var renderer in allRenderers)
+            {
+                if (renderer == null || !renderer.gameObject.activeSelf || !IsArmorAttachmentName(renderer.name))
+                    continue;
+
+                SetHierarchyActive(renderer.transform);
+                renderer.enabled = true;
+                enabledCount++;
+            }
+
+            if (enabledCount == 0)
+                throw new InvalidOperationException("No active armor attachment renderers found for " + armorAsset.displayName);
 
             var bounds = CalculateEnabledBounds(allRenderers, instance.transform.position);
             var center = bounds.center + new Vector3(0f, 0.02f, 0f);
@@ -174,6 +318,33 @@ public static class ArmorIconGenerator
         }
 
         return null;
+    }
+
+    private static void SetHierarchyActive(Transform node)
+    {
+        if (node == null)
+            return;
+
+        Transform current = node;
+        while (current != null)
+        {
+            current.gameObject.SetActive(true);
+            current = current.parent;
+        }
+    }
+
+    private static bool IsArmorAttachmentName(string objectName)
+    {
+        if (string.IsNullOrWhiteSpace(objectName))
+            return false;
+
+        return objectName.StartsWith("SM_Chr_Attach_Padding", StringComparison.Ordinal)
+            || objectName.Contains("Nameplate")
+            || objectName.Contains("Pouch")
+            || objectName.Contains("Grenade")
+            || objectName.Contains("ShellStrip")
+            || objectName.Contains("Tool")
+            || objectName.Contains("Bomb_C4");
     }
 
     private static Bounds CalculateEnabledBounds(Renderer[] renderers, Vector3 fallbackPosition)

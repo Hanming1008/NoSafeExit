@@ -13,11 +13,13 @@ MonoBehaviour:
   m_Name: Container_Rig_3x3
   m_EditorClassIdentifier: Assembly-CSharp::ContainerItemDefinition
   itemId: container_rig_3x3
-  displayName: Rig 3x3
-  description: Prototype rig container with a 3x3 grid.
-  icon: {fileID: 21300000, guid: 4af80cdda6c77a04ba2b88e5d85871c0, type: 3}
-  gridInventorySprite: {fileID: 21300000, guid: 4af80cdda6c77a04ba2b88e5d85871c0, type: 3}
+  displayName: Level I Armor Container
+  description: Internal 3x3 capacity container provided by Level I Body Armor.
+  icon: {fileID: 21300000, guid: 5b6fb05548faaf444825a5e40c0ec3f0, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: 5b6fb05548faaf444825a5e40c0ec3f0, type: 3}
   worldPrefab: {fileID: 0}
+  valueTier: 0
+  moneyValue: 600
   weight: 1.5
   canStack: 0
   maxStackSize: 1
@@ -39,3 +41,10 @@ MonoBehaviour:
   - SM_Chr_Attach_Pouch_Mag_Double_01 (1)
   - SM_Chr_Attach_Grenade_Flash_01
   hiddenVisualObjectNames: []
+  worldVisualPrefabs:
+  - {fileID: 1374782591895752, guid: fbed8d5f27a04d84c87e5373181ca5aa, type: 3}
+  - {fileID: 1879016363822440, guid: 03d484ad674de9a4c846790ebe4c27ba, type: 3}
+  - {fileID: 1915862227026698, guid: 7db53898d81af324182f7e1033242352, type: 3}
+  - {fileID: 1722426671386572, guid: 424cf7fadc9c82c459effc5520108516, type: 3}
+  - {fileID: 1905544244897602, guid: f07201431d557c443908aef26284c90f, type: 3}
+  - {fileID: 1647406848476478, guid: 0d33560f0035d0c40b40fbcafde1ca20, type: 3}

@@ -202,25 +202,95 @@ public class PlayerGridInventory : MonoBehaviour
 
         EnsureContainers();
 
-        if (HasRigContainer && rigContainer != null && rigContainer.TryPlaceNewItem(item, quantity, runtimeData, out placement))
+        if (HasRigContainer && rigContainer != null && rigContainer.TryAddItem(item, quantity, runtimeData, out placement))
         {
             containerKind = GridContainerKind.Rig;
             return true;
         }
 
-        if (HasBackpackContainer && backpackContainer != null && backpackContainer.TryPlaceNewItem(item, quantity, runtimeData, out placement))
+        if (HasBackpackContainer && backpackContainer != null && backpackContainer.TryAddItem(item, quantity, runtimeData, out placement))
         {
             containerKind = GridContainerKind.Backpack;
             return true;
         }
 
-        if (includePocket && pocketContainer != null && pocketContainer.TryPlaceNewItem(item, quantity, runtimeData, out placement))
+        if (includePocket && pocketContainer != null && pocketContainer.TryAddItem(item, quantity, runtimeData, out placement))
         {
             containerKind = GridContainerKind.Pocket;
             return true;
         }
 
         return false;
+    }
+
+    public int GetQuantity(ItemDefinition item)
+    {
+        if (item == null)
+            return 0;
+
+        EnsureContainers();
+
+        int totalQuantity = 0;
+        if (HasRigContainer && rigContainer != null)
+            totalQuantity += rigContainer.GetQuantity(item);
+
+        if (HasBackpackContainer && backpackContainer != null)
+            totalQuantity += backpackContainer.GetQuantity(item);
+
+        if (pocketContainer != null)
+            totalQuantity += pocketContainer.GetQuantity(item);
+
+        return totalQuantity;
+    }
+
+    public int RemoveItem(ItemDefinition item, int quantity)
+    {
+        if (item == null || quantity <= 0)
+            return 0;
+
+        EnsureContainers();
+
+        int removedQuantity = 0;
+        int remainingQuantity = quantity;
+
+        if (HasRigContainer && rigContainer != null)
+        {
+            removedQuantity += rigContainer.RemoveItemIncludingNested(item, remainingQuantity);
+            remainingQuantity = quantity - removedQuantity;
+        }
+
+        if (remainingQuantity > 0 && HasBackpackContainer && backpackContainer != null)
+        {
+            removedQuantity += backpackContainer.RemoveItemIncludingNested(item, remainingQuantity);
+            remainingQuantity = quantity - removedQuantity;
+        }
+
+        if (remainingQuantity > 0 && pocketContainer != null)
+            removedQuantity += pocketContainer.RemoveItemIncludingNested(item, remainingQuantity);
+
+        return removedQuantity;
+    }
+
+    public bool TryFindFirstPlacement(
+        ItemDefinition item,
+        out GridContainerState sourceContainer,
+        out GridItemPlacement sourcePlacement)
+    {
+        sourceContainer = null;
+        sourcePlacement = null;
+
+        if (item == null)
+            return false;
+
+        EnsureContainers();
+
+        if (HasRigContainer && rigContainer != null && rigContainer.TryFindFirstPlacement(item, out sourceContainer, out sourcePlacement))
+            return true;
+
+        if (HasBackpackContainer && backpackContainer != null && backpackContainer.TryFindFirstPlacement(item, out sourceContainer, out sourcePlacement))
+            return true;
+
+        return pocketContainer != null && pocketContainer.TryFindFirstPlacement(item, out sourceContainer, out sourcePlacement);
     }
 
     private GridContainerState ResolveActiveContainerState(
@@ -249,7 +319,18 @@ public class PlayerGridInventory : MonoBehaviour
             return null;
 
         ItemRuntimeData preparedRuntimeData = runtimeData ?? ItemRuntimeData.CreateFor(definition);
-        preparedRuntimeData.EnsureFor(definition);
+        if (definition is ContainerItemDefinition containerDefinition)
+        {
+            preparedRuntimeData.EnsureContainer(
+                containerDefinition.containerKind,
+                containerDefinition.gridRows,
+                containerDefinition.gridColumns);
+        }
+        else
+        {
+            preparedRuntimeData.EnsureFor(definition);
+        }
+
         return preparedRuntimeData;
     }
 

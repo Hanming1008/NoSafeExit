@@ -39,6 +39,11 @@ namespace JUTPS.UI
         void Update()
         {
             if (HealthComponent == null || HealthBarImage == null) return;
+            if (!IsPlayerHealthBar && HealthComponent.IsDead)
+            {
+                gameObject.SetActive(false);
+                return;
+            }
 
 
             float healthValueNormalized = HealthComponent.Health / HealthComponent.MaxHealth;

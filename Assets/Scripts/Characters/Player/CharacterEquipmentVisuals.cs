@@ -19,6 +19,16 @@ public class CharacterEquipmentVisuals : MonoBehaviour
     [Header("Behavior")]
     [SerializeField] private bool hideManagedVisualsWhenUnequipped;
     [SerializeField] private bool disablePrototypeFallbacksOnStart;
+    [SerializeField]
+    private string[] managedHeadVisualObjectNames =
+    {
+        "SM_Chr_Attach_Helmet_01_Goggles_01",
+        "SM_Chr_Attach_Helmet_01_Goggles_01_Glass",
+        "SM_Chr_Attach_Helmet_02",
+        "SM_Chr_Attach_NVG_03",
+        "SM_Chr_Attach_Helmet_07",
+        "SM_Chr_Attach_Helmet_09"
+    };
 
     private readonly Dictionary<string, List<GameObject>> visualLookup = new Dictionary<string, List<GameObject>>(StringComparer.Ordinal);
     private string[] lastHeadEnabled = Array.Empty<string>();
@@ -64,6 +74,47 @@ public class CharacterEquipmentVisuals : MonoBehaviour
     public void ForceRefreshNow()
     {
         Refresh(force: true);
+    }
+
+    public bool TryBuildWorldPickupVisual(ItemDefinition definition, Transform parent)
+    {
+        if (definition == null || parent == null)
+            return false;
+
+        string[] visualNames = GetEquippedVisualNames(definition);
+        if (visualNames == null || visualNames.Length == 0)
+            return false;
+
+        bool createdAnyVisual = false;
+        HashSet<int> clonedSourceIds = new HashSet<int>();
+        for (int i = 0; i < visualNames.Length; i++)
+        {
+            string visualName = visualNames[i];
+            if (string.IsNullOrWhiteSpace(visualName))
+                continue;
+
+            if (!visualLookup.TryGetValue(visualName, out List<GameObject> visualObjects) || visualObjects == null)
+                continue;
+
+            for (int objectIndex = 0; objectIndex < visualObjects.Count; objectIndex++)
+            {
+                GameObject source = visualObjects[objectIndex];
+                if (source == null || !clonedSourceIds.Add(source.GetInstanceID()))
+                    continue;
+
+                GameObject clone = Instantiate(source, source.transform.position, source.transform.rotation);
+                clone.name = source.name;
+                clone.transform.SetParent(parent, true);
+                SetLayerRecursive(clone, 0);
+                SetActiveRecursive(clone, true);
+                createdAnyVisual = true;
+            }
+        }
+
+        if (createdAnyVisual)
+            CenterClonedVisuals(parent);
+
+        return createdAnyVisual;
     }
 
     private void ResolveReferences()
@@ -115,6 +166,7 @@ public class CharacterEquipmentVisuals : MonoBehaviour
 
         if (force || currentHeadArmor != lastHeadArmor)
         {
+            SetActiveForNames(managedHeadVisualObjectNames, false);
             ApplyVisualTransition(
                 ref lastHeadEnabled,
                 ref lastHeadHidden,
@@ -307,5 +359,98 @@ public class CharacterEquipmentVisuals : MonoBehaviour
         string[] clone = new string[names.Length];
         Array.Copy(names, clone, names.Length);
         return clone;
+    }
+
+    private static string[] GetEquippedVisualNames(ItemDefinition definition)
+    {
+        if (definition is ArmorItemDefinition armor)
+            return armor.equippedVisualObjectNames;
+
+        if (definition is ContainerItemDefinition container)
+            return container.equippedVisualObjectNames;
+
+        return Array.Empty<string>();
+    }
+
+    private static void SetActiveRecursive(GameObject root, bool active)
+    {
+        if (root == null)
+            return;
+
+        root.SetActive(active);
+        Transform rootTransform = root.transform;
+        for (int i = 0; i < rootTransform.childCount; i++)
+            SetActiveRecursive(rootTransform.GetChild(i).gameObject, active);
+    }
+
+    private static void SetLayerRecursive(GameObject root, int layer)
+    {
+        if (root == null)
+            return;
+
+        root.layer = layer;
+        Transform rootTransform = root.transform;
+        for (int i = 0; i < rootTransform.childCount; i++)
+            SetLayerRecursive(rootTransform.GetChild(i).gameObject, layer);
+    }
+
+    private static void CenterClonedVisuals(Transform parent)
+    {
+        if (!TryGetLocalRendererBounds(parent, out Bounds localBounds))
+            return;
+
+        Vector3 horizontalOffset = new Vector3(localBounds.center.x, 0f, localBounds.center.z);
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            child.localPosition -= horizontalOffset;
+        }
+    }
+
+    private static bool TryGetLocalRendererBounds(Transform parent, out Bounds localBounds)
+    {
+        localBounds = default;
+        if (parent == null)
+            return false;
+
+        Renderer[] renderers = parent.GetComponentsInChildren<Renderer>(true);
+        bool hasBounds = false;
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+                continue;
+
+            Bounds worldBounds = renderer.bounds;
+            Vector3 min = worldBounds.min;
+            Vector3 max = worldBounds.max;
+            Vector3[] corners =
+            {
+                new Vector3(min.x, min.y, min.z),
+                new Vector3(min.x, min.y, max.z),
+                new Vector3(min.x, max.y, min.z),
+                new Vector3(min.x, max.y, max.z),
+                new Vector3(max.x, min.y, min.z),
+                new Vector3(max.x, min.y, max.z),
+                new Vector3(max.x, max.y, min.z),
+                new Vector3(max.x, max.y, max.z)
+            };
+
+            for (int cornerIndex = 0; cornerIndex < corners.Length; cornerIndex++)
+            {
+                Vector3 localCorner = parent.InverseTransformPoint(corners[cornerIndex]);
+                if (!hasBounds)
+                {
+                    localBounds = new Bounds(localCorner, Vector3.zero);
+                    hasBounds = true;
+                }
+                else
+                {
+                    localBounds.Encapsulate(localCorner);
+                }
+            }
+        }
+
+        return hasBounds;
     }
 }

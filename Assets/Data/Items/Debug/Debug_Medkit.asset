@@ -20,12 +20,14 @@ MonoBehaviour:
     type: 3}
   worldPrefab: {fileID: 1588381071799560, guid: 538bd2dae55dac44f942fd3ed7c2a334,
     type: 3}
+  valueTier: 0
+  moneyValue: 50
   weight: 0.8
   canStack: 1
   maxStackSize: 4
   inventoryRows: 1
   inventoryColumns: 2
   canRotateInGrid: 0
-  healAmount: 35
-  staminaRestoreAmount: 20
-  useDuration: 1.5
+  healAmount: 80
+  staminaRestoreAmount: 0
+  useDuration: 6

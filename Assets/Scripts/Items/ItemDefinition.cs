@@ -1,5 +1,12 @@
 using UnityEngine;
 
+public enum ItemValueTier
+{
+    Blue,
+    Gold,
+    Red
+}
+
 public abstract class ItemDefinition : ScriptableObject
 {
     [Header("Identity")]
@@ -14,6 +21,11 @@ public abstract class ItemDefinition : ScriptableObject
     public Sprite gridInventorySprite;
     public GameObject worldPrefab;
 
+    [Header("Value")]
+    public ItemValueTier valueTier = ItemValueTier.Blue;
+    [Min(0f)]
+    public float moneyValue;
+
     [Header("Inventory")]
     [Min(0f)]
     public float weight = 0.1f;
@@ -27,6 +39,11 @@ public abstract class ItemDefinition : ScriptableObject
     public bool canRotateInGrid;
 
     public abstract ItemType Type { get; }
+
+    public float GetTotalMoneyValue(int quantity)
+    {
+        return moneyValue * Mathf.Max(0, quantity);
+    }
 
     public Sprite GetGridInventorySpriteOrFallback()
     {
@@ -71,6 +88,9 @@ public abstract class ItemDefinition : ScriptableObject
 
         if (weight < 0f)
             weight = 0f;
+
+        if (moneyValue < 0f)
+            moneyValue = 0f;
 
         if (!canStack)
         {

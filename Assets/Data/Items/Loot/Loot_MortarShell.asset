@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e21095e583fb7ba4ab197e697022b0ed, type: 3}
+  m_Name: Loot_MortarShell
+  m_EditorClassIdentifier: Assembly-CSharp::LootItemDefinition
+  itemId: loot_mortar_shell
+  displayName: Mortar Shell
+  description: A heavy mortar shell valued by traders.
+  icon: {fileID: 21300000, guid: c6b1297e3ae63ab4ca7294e3844e750b, type: 3}
+  gridInventorySprite: {fileID: 21300000, guid: 74045de82b546ca469cb4c3dc00f8be9,
+    type: 3}
+  worldPrefab: {fileID: 1281157697775420, guid: c976d2e374a737b4399788e286630fa0,
+    type: 3}
+  valueTier: 1
+  moneyValue: 7000
+  weight: 9
+  canStack: 0
+  maxStackSize: 1
+  inventoryRows: 3
+  inventoryColumns: 1
+  canRotateInGrid: 0
+  isCurrency: 0

@@ -176,8 +176,12 @@ void OnCollisionEnter(Collision col)
                     CharacterBrain.JUCharacterBrain otherCharacter = col.gameObject.GetComponentInParent<JUTPS.CharacterBrain.JUCharacterBrain>();
                     if (otherCharacter)
                     {
-                        otherCharacter.TakeDamage(damageInfo);
-                        appliedDamage = true;
+                        JUHealth characterHealth = otherCharacter.CharacterHealth;
+                        if (characterHealth != null)
+                        {
+                            RealDamage = characterHealth.DoDamage(damageInfo);
+                            appliedDamage = RealDamage > 0f;
+                        }
                     }
                 }
             }
@@ -185,8 +189,8 @@ void OnCollisionEnter(Collision col)
             {
                 if (col.gameObject.TryGetComponent(out JUHealth health))
                 {
-                    health.DoDamage(damageInfo);
-                    appliedDamage = true;
+                    RealDamage = health.DoDamage(damageInfo);
+                    appliedDamage = RealDamage > 0f;
                 }
             }
 

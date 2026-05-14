@@ -14,6 +14,9 @@ public class ArmorItemDefinition : ItemDefinition
     public string[] equippedVisualObjectNames;
     public string[] hiddenVisualObjectNames;
 
+    [Header("World Pickup")]
+    public GameObject[] worldVisualPrefabs;
+
     public override ItemType Type => ItemType.Armor;
 
     protected override void OnValidate()

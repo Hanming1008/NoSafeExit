@@ -20,6 +20,8 @@ MonoBehaviour:
     type: 3}
   worldPrefab: {fileID: 1114978994277142, guid: 617ad14b82f4de54e8b80e9a3288990f,
     type: 3}
+  valueTier: 0
+  moneyValue: 1
   weight: 0.01
   canStack: 1
   maxStackSize: 60

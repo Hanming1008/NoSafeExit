@@ -16,13 +16,24 @@ namespace JU.AI
         /// <param name="path">The navmesh data that will receive the new path.</param>
         public static void CalculatePath(Vector3 start, Vector3 end, NavMeshPath path)
         {
-            if ((start - end).magnitude < 0.5f)
+            if (path == null || (start - end).sqrMagnitude < 0.25f)
                 return;
 
-            Debug.Assert(path != null, "Path data can't be null.");
-            Debug.Assert((start - end).magnitude > 0.5f, "The start position can't be equal to end position.");
+            // Some scene-placed enemies can briefly spawn or wander outside the baked NavMesh.
+            // Clamp both ends before asking Unity to calculate, otherwise the plugin can throw every frame.
+            if (!ClosestToNavMesh(start, out Vector3 navStart) || !ClosestToNavMesh(end, out Vector3 navEnd))
+            {
+                path.ClearCorners();
+                return;
+            }
 
-            NavMesh.CalculatePath(start, end, NavMesh.AllAreas, path);
+            if ((navStart - navEnd).sqrMagnitude < 0.25f)
+            {
+                path.ClearCorners();
+                return;
+            }
+
+            NavMesh.CalculatePath(navStart, navEnd, NavMesh.AllAreas, path);
         }
 
         /// <summary>

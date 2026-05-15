@@ -76,24 +76,7 @@ public class PlayerGameplayInput : MonoBehaviour
 
     public int GetTriggeredQuickbarIndex()
     {
-        if (Input.GetKeyDown(quickbarSlot1Key))
-            return 0;
-
-        if (Input.GetKeyDown(quickbarSlot2Key))
-            return 1;
-
-        if (Input.GetKeyDown(quickbarSlot3Key))
-            return 2;
-
-        if (Input.GetKeyDown(quickbarSlot4Key))
-            return 3;
-
-        if (Input.GetKeyDown(quickbarSlot5Key))
-            return 4;
-
-        if (Input.GetKeyDown(quickbarSlot6Key))
-            return 5;
-
+        // Quick-use hotbar is disabled. Number keys remain free for future input mapping.
         return -1;
     }
 

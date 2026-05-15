@@ -10,8 +10,15 @@ public class EnemyWeaponLoadout : MonoBehaviour
     [SerializeField, Min(0)] private int reserveMagazineCount = 3;
     [SerializeField] private bool refillMagazineOnAwake = true;
     [SerializeField] private bool applyOnAwake = true;
+    [SerializeField] private bool useDefinitionVisualOverride = true;
+
+    private GameObject visualOverrideRoot;
+    private Renderer[] originalRenderers;
+    private WeaponItemDefinition visualOverrideDefinition;
 
     public WeaponItemDefinition WeaponDefinition => weaponDefinition;
+    public Weapon Weapon => weapon;
+    public int ReserveMagazineCount => Mathf.Max(0, reserveMagazineCount);
 
     private void Awake()
     {
@@ -19,6 +26,18 @@ public class EnemyWeaponLoadout : MonoBehaviour
 
         if (applyOnAwake)
             ApplyLoadout(refillMagazineOnAwake);
+    }
+
+    private void LateUpdate()
+    {
+        if (!Application.isPlaying || weaponDefinition == null || weapon == null)
+            return;
+
+        if (useDefinitionVisualOverride && (visualOverrideRoot == null || visualOverrideDefinition != weaponDefinition))
+            ApplyDefinitionVisualOverride(weaponDefinition);
+
+        if (visualOverrideRoot != null)
+            SetRenderersVisible(originalRenderers, false);
     }
 
 #if UNITY_EDITOR
@@ -37,10 +56,27 @@ public class EnemyWeaponLoadout : MonoBehaviour
         ApplyLoadout(true);
     }
 
+    public void Configure(WeaponItemDefinition definition, int reserveMagazines, bool refillMagazine = true)
+    {
+        weaponDefinition = definition;
+        reserveMagazineCount = Mathf.Max(0, reserveMagazines);
+        ApplyLoadout(refillMagazine);
+    }
+
     private void ApplyLoadout(bool refillMagazine)
     {
-        if (weaponDefinition == null || weapon == null)
+        if (weapon == null)
             return;
+
+        if (weaponDefinition == null)
+        {
+            ClearVisualOverride();
+            originalRenderers = weapon.GetComponentsInChildren<Renderer>(true);
+            SetRenderersVisible(originalRenderers, false);
+            return;
+        }
+
+        ApplyDefinitionVisualOverride(weaponDefinition);
 
         WeaponReferenceAutoBinder referenceBinder = GetComponent<WeaponReferenceAutoBinder>();
         if (referenceBinder != null)
@@ -102,5 +138,110 @@ public class EnemyWeaponLoadout : MonoBehaviour
             WeaponFireModeType.PumpAction => Weapon.WeaponFireMode.Shotgun,
             _ => Weapon.WeaponFireMode.SemiAuto
         };
+    }
+
+    private void ApplyDefinitionVisualOverride(WeaponItemDefinition definition)
+    {
+        if (!Application.isPlaying)
+            return;
+
+        if (!useDefinitionVisualOverride || weapon == null || definition == null || definition.equippedPrefab == null)
+        {
+            ClearVisualOverride();
+            return;
+        }
+
+        if (visualOverrideRoot != null && visualOverrideDefinition == definition)
+        {
+            SetRenderersVisible(originalRenderers, false);
+            return;
+        }
+
+        ClearVisualOverride();
+
+        Transform weaponRoot = weapon.transform;
+        originalRenderers = weaponRoot.GetComponentsInChildren<Renderer>(true);
+        visualOverrideRoot = Instantiate(definition.equippedPrefab, weaponRoot);
+        visualOverrideRoot.name = definition.displayName + "_EnemyVisual";
+        visualOverrideRoot.transform.localPosition = Vector3.zero;
+        visualOverrideRoot.transform.localRotation = Quaternion.identity;
+        visualOverrideRoot.transform.localScale = Vector3.one;
+        visualOverrideDefinition = definition;
+
+        SetLayerRecursively(visualOverrideRoot, weaponRoot.gameObject.layer);
+        StripGameplayComponents(visualOverrideRoot);
+        SetRenderersVisible(originalRenderers, false);
+    }
+
+    private void ClearVisualOverride()
+    {
+        if (visualOverrideRoot == null)
+            return;
+
+        SetRenderersVisible(originalRenderers, true);
+        DestroyRuntimeObject(visualOverrideRoot);
+        visualOverrideRoot = null;
+        visualOverrideDefinition = null;
+        originalRenderers = null;
+    }
+
+    private static void SetRenderersVisible(Renderer[] renderers, bool visible)
+    {
+        if (renderers == null)
+            return;
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+                continue;
+
+            renderer.enabled = visible;
+            renderer.forceRenderingOff = !visible;
+        }
+    }
+
+    private static void StripGameplayComponents(GameObject root)
+    {
+        if (root == null)
+            return;
+
+        Collider[] colliders = root.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+            DestroyRuntimeObject(colliders[i]);
+
+        Rigidbody[] rigidbodies = root.GetComponentsInChildren<Rigidbody>(true);
+        for (int i = 0; i < rigidbodies.Length; i++)
+            DestroyRuntimeObject(rigidbodies[i]);
+
+        AudioSource[] audioSources = root.GetComponentsInChildren<AudioSource>(true);
+        for (int i = 0; i < audioSources.Length; i++)
+            DestroyRuntimeObject(audioSources[i]);
+
+        MonoBehaviour[] behaviours = root.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < behaviours.Length; i++)
+            DestroyRuntimeObject(behaviours[i]);
+    }
+
+    private static void SetLayerRecursively(GameObject root, int layer)
+    {
+        if (root == null)
+            return;
+
+        root.layer = layer;
+        Transform rootTransform = root.transform;
+        for (int i = 0; i < rootTransform.childCount; i++)
+            SetLayerRecursively(rootTransform.GetChild(i).gameObject, layer);
+    }
+
+    private static void DestroyRuntimeObject(Object target)
+    {
+        if (target == null)
+            return;
+
+        if (Application.isPlaying)
+            Destroy(target);
+        else
+            DestroyImmediate(target);
     }
 }

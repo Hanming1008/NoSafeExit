@@ -157,6 +157,20 @@ public class PlayerStats : MonoBehaviour, IDamageable
         return currentHunger - previousHunger;
     }
 
+    public void ReviveFull()
+    {
+        CancelInvoke(nameof(HideSelf));
+        isDead = false;
+
+        currentHealth = maxHealth;
+        currentStamina = maxStamina;
+
+        if (playerMove != null) playerMove.enabled = true;
+        if (playerFaceMouse != null) playerFaceMouse.enabled = true;
+        if (playerShoot != null) playerShoot.enabled = true;
+        if (characterController != null) characterController.enabled = true;
+    }
+
     public void TakeDamage(float amount, GameObject source)
     {
         TakeDamage(amount, source, null, transform.position + Vector3.up);

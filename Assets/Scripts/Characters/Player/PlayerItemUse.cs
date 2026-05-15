@@ -252,11 +252,12 @@ public class PlayerItemUse : MonoBehaviour
             healedAmount = playerStats.Heal(medical.healAmount);
             restoredStamina = playerStats.RestoreStamina(medical.staminaRestoreAmount);
         }
-        else if (juHealth != null && !juHealth.IsDead)
+
+        if (juHealth != null && !juHealth.IsDead && medical.healAmount > 0f)
         {
             float previousHealth = juHealth.Health;
             juHealth.Health = Mathf.Min(juHealth.MaxHealth, juHealth.Health + medical.healAmount);
-            healedAmount = juHealth.Health - previousHealth;
+            healedAmount = Mathf.Max(healedAmount, juHealth.Health - previousHealth);
         }
 
         Log(
@@ -301,10 +302,14 @@ public class PlayerItemUse : MonoBehaviour
         {
             bool canHeal = playerStats.IsAlive && playerStats.currentHealth < playerStats.maxHealth && medical.healAmount > 0f;
             bool canRestoreStamina = playerStats.IsAlive && playerStats.currentStamina < playerStats.maxStamina && medical.staminaRestoreAmount > 0f;
-            return canHeal || canRestoreStamina;
+            if (canHeal || canRestoreStamina)
+                return true;
         }
 
-        return juHealth != null && !juHealth.IsDead && juHealth.Health < juHealth.MaxHealth && medical.healAmount > 0f;
+        return juHealth != null
+            && !juHealth.IsDead
+            && juHealth.Health < juHealth.MaxHealth
+            && medical.healAmount > 0f;
     }
 
     private bool CanApplyConsumable(ConsumableItemDefinition consumable)

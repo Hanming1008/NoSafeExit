@@ -56,6 +56,52 @@ public class EnemyCorpseLoot : MonoBehaviour
         }
     }
 
+    public void SetIdentity(string typeDisplayName, string corpseDisplayName = null)
+    {
+        if (!string.IsNullOrWhiteSpace(typeDisplayName))
+            enemyTypeDisplayName = typeDisplayName;
+
+        displayName = !string.IsNullOrWhiteSpace(corpseDisplayName)
+            ? corpseDisplayName
+            : enemyTypeDisplayName + " Corpse";
+    }
+
+    public void ClearAllLoot()
+    {
+        EnsureEquipmentSlots();
+        EnsurePocket();
+
+        for (int i = 0; i < equippedSlots.Count; i++)
+        {
+            if (equippedSlots[i]?.slot != null)
+                equippedSlots[i].slot.Clear();
+        }
+
+        pocketContainer.Clear();
+        initialized = true;
+    }
+
+    public bool TrySetSlot(EquipmentSlotType slotType, ItemDefinition item, int quantity = 1, ItemRuntimeData runtimeData = null)
+    {
+        if (!CanEquip(slotType, item))
+            return false;
+
+        InventorySlot slot = GetSlot(slotType);
+        if (slot == null)
+            return false;
+
+        slot.Clear();
+        return slot.TrySet(item, quantity, runtimeData);
+    }
+
+    public GridContainerState GetEquippedContainer(EquipmentSlotType slotType)
+    {
+        InventorySlot slot = GetSlot(slotType);
+        return slot != null && !slot.IsEmpty && slot.RuntimeData != null
+            ? slot.RuntimeData.StoredContainerState
+            : null;
+    }
+
     private void Awake()
     {
         ResolveReferences();

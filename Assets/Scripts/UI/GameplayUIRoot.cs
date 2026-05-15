@@ -420,9 +420,7 @@ public class GameplayUIRoot : MonoBehaviour
         if (itemUse != null && itemUse.CanUse(slot.Item))
         {
             contextPrimaryText.text = "Use";
-            contextSecondaryText.text = "Quickbar";
             showPrimary = true;
-            showSecondary = true;
         }
         else if (slot.Item is WeaponItemDefinition || slot.Item is ArmorItemDefinition || slot.Item is ContainerItemDefinition)
         {
@@ -644,12 +642,7 @@ public class GameplayUIRoot : MonoBehaviour
         HandleGridDragInput();
         HandlePointerFallbackInput();
 
-        if (!IsBlockingOverlayOpen())
-        {
-            int quickbarIndex = gameplayInput.GetTriggeredQuickbarIndex();
-            if (quickbarIndex >= 0)
-                TryUseQuickbarSlot(quickbarIndex);
-        }
+        // Quick-use hotbar is intentionally disabled; consumables are used from inventory/context menus.
     }
 
     private bool NeedsReferenceResolution()
@@ -659,7 +652,6 @@ public class GameplayUIRoot : MonoBehaviour
             || inventory == null
             || gridInventory == null
             || equipment == null
-            || quickbar == null
             || itemUse == null
             || itemDrop == null
             || weaponSelection == null
@@ -2166,7 +2158,7 @@ public class GameplayUIRoot : MonoBehaviour
         {
             ApplyRightWorkspaceMode(false);
             rightWorkspaceTitleText.text = "Reserved";
-            rightWorkspaceHintText.text = "Future loot container / shelter stash area.";
+            rightWorkspaceHintText.text = string.Empty;
             SetRightWorkspaceCashVisible(false);
             externalContainerView.rect.gameObject.SetActive(false);
             ClearGridPlacementViews(externalContainerView);
@@ -2179,7 +2171,7 @@ public class GameplayUIRoot : MonoBehaviour
         {
             ApplyRightWorkspaceMode(false);
             rightWorkspaceTitleText.text = "Reserved";
-            rightWorkspaceHintText.text = "Future loot container / shelter stash area.";
+            rightWorkspaceHintText.text = string.Empty;
             SetRightWorkspaceCashVisible(false);
             externalContainerView.rect.gameObject.SetActive(false);
             ClearGridPlacementViews(externalContainerView);
@@ -2189,9 +2181,7 @@ public class GameplayUIRoot : MonoBehaviour
         bool isShelterStash = IsShelterStash(openedSearchableContainer);
         ApplyRightWorkspaceMode(isShelterStash);
         rightWorkspaceTitleText.text = openedSearchableContainer.DisplayName;
-        rightWorkspaceHintText.text = isShelterStash
-            ? "Drag items between stash and carry containers."
-            : "Drag items into your carry containers.";
+        rightWorkspaceHintText.text = string.Empty;
         SetRightWorkspaceCashVisible(isShelterStash);
         if (isShelterStash && rightWorkspaceCashText != null)
             rightWorkspaceCashText.text = FormatStashCash(CalculateCurrencyValue(containerState));
@@ -2240,7 +2230,7 @@ public class GameplayUIRoot : MonoBehaviour
         openedCorpseLoot.EnsureInitialized();
         ApplyRightWorkspaceMode(false);
         rightWorkspaceTitleText.text = openedCorpseLoot.EnemyTypeDisplayName;
-        rightWorkspaceHintText.text = "Search corpse equipment and pockets.";
+        rightWorkspaceHintText.text = string.Empty;
         SetRightWorkspaceCashVisible(false);
 
         if (externalContainerView != null)
@@ -2575,7 +2565,8 @@ public class GameplayUIRoot : MonoBehaviour
             weaponHudNameText.text = "Unarmed";
             weaponHudModeText.text = "NO ACTIVE WEAPON";
             weaponHudAmmoText.text = "-- / --";
-            weaponHudDetailText.text = "Equip a weapon in slot 1 or 2";
+            weaponHudDetailText.text = string.Empty;
+            weaponHudDetailText.gameObject.SetActive(false);
 
             if (weaponHudIconImage != null)
             {
@@ -2591,11 +2582,13 @@ public class GameplayUIRoot : MonoBehaviour
 
         int currentMagazine = Mathf.Clamp(currentWeapon.BulletsAmounts, 0, currentWeapon.BulletsPerMagazine);
         int reserveAmmo = 0;
-        string ammoLabel = "No Ammo";
+        string ammoLabel = string.Empty;
 
         if (currentDefinition.usesAmmo && currentDefinition.compatibleAmmo != null)
         {
-            ammoLabel = currentDefinition.compatibleAmmo.displayName;
+            ammoLabel = !string.IsNullOrWhiteSpace(currentDefinition.compatibleAmmo.ammoCategory)
+                ? currentDefinition.compatibleAmmo.ammoCategory
+                : currentDefinition.compatibleAmmo.displayName;
             reserveAmmo = weaponSelection != null
                 ? weaponSelection.GetReserveAmmoFor(currentDefinition)
                 : GetCarriedItemQuantity(currentDefinition.compatibleAmmo);
@@ -2604,7 +2597,8 @@ public class GameplayUIRoot : MonoBehaviour
         weaponHudNameText.text = currentDefinition.displayName;
         weaponHudModeText.text = FormatFireMode(currentDefinition.fireMode) + "  |  " + FormatWeaponCategory(currentDefinition.weaponCategory);
         weaponHudAmmoText.text = currentMagazine + " / " + reserveAmmo;
-        weaponHudDetailText.text = "MAG " + currentWeapon.BulletsPerMagazine + "  |  " + ammoLabel + "  |  DMG " + currentDefinition.baseDamage.ToString("0");
+        weaponHudDetailText.text = !string.IsNullOrWhiteSpace(ammoLabel) ? "AMMO  " + ammoLabel : string.Empty;
+        weaponHudDetailText.gameObject.SetActive(!string.IsNullOrWhiteSpace(ammoLabel));
 
         Sprite icon = currentDefinition.icon != null ? currentDefinition.icon : currentWeapon.ItemIcon;
         if (weaponHudIconImage != null)
@@ -2964,7 +2958,7 @@ public class GameplayUIRoot : MonoBehaviour
         runtimeRoot = CreateRect("GameplayRuntimeUI", transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
         BuildInventoryPanel();
-        BuildQuickbarPanel();
+        // Quickbar UI has been retired; inventory/context actions own item use now.
         BuildStatusHudPanel();
         BuildWeaponHudPanel();
         BuildMinimapPanel();
@@ -2994,7 +2988,6 @@ public class GameplayUIRoot : MonoBehaviour
         inventoryPanel.offsetMax = new Vector2(-18f, -18f);
 
         CreateText("Title", inventoryPanel, "Inventory", 30, TextAnchor.UpperLeft, new Vector2(28f, -18f), new Vector2(260f, 40f), FontStyle.Bold);
-        CreateText("Hint", inventoryPanel, "B close  |  Right click items for actions", 16, TextAnchor.UpperLeft, new Vector2(28f, -54f), new Vector2(420f, 26f), FontStyle.Normal);
 
         RectTransform leftWorkspace = CreateRect(
             "LeftWorkspace",
@@ -3021,13 +3014,14 @@ public class GameplayUIRoot : MonoBehaviour
         rightWorkspaceHintText = CreateText(
             "RightWorkspaceHint",
             rightWorkspace,
-            "Future loot container / shelter stash area.",
+            string.Empty,
             18,
             TextAnchor.UpperLeft,
             new Vector2(20f, -52f),
             new Vector2(340f, 54f),
             FontStyle.Normal);
         rightWorkspaceHintText.color = new Color(0.72f, 0.77f, 0.84f, 0.74f);
+        rightWorkspaceHintText.gameObject.SetActive(false);
         rightWorkspaceCashText = CreateText(
             "RightWorkspaceCash",
             rightWorkspace,
@@ -4513,7 +4507,7 @@ public class GameplayUIRoot : MonoBehaviour
         weaponHudDetailText = CreateText(
             "WeaponDetail",
             weaponHudPanel,
-            "Equip a weapon in slot 1 or 2",
+            string.Empty,
             14,
             TextAnchor.LowerLeft,
             new Vector2(136f, 12f),
@@ -4522,6 +4516,7 @@ public class GameplayUIRoot : MonoBehaviour
         weaponHudDetailText.rectTransform.anchorMin = new Vector2(0f, 0f);
         weaponHudDetailText.rectTransform.anchorMax = new Vector2(0f, 0f);
         weaponHudDetailText.rectTransform.pivot = new Vector2(0f, 0f);
+        weaponHudDetailText.gameObject.SetActive(false);
     }
 
     private void BuildMinimapPanel()

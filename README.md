@@ -3,8 +3,19 @@
 Top-down extraction shooter prototype made with Unity.
 
 ## Latest Release
-- v0.6.0 Loot, Shelter, Trader, and Enemy Systems Update
-- https://github.com/Hanming1008/NoSafeExit/releases/tag/v0.6.0
+- v0.7.0 Raid Flow, Enemy Loadouts, and Shelter Systems
+- https://github.com/Hanming1008/NoSafeExit/releases/tag/v0.7.0
+
+## v0.7.0 Update Highlights
+- Added the full raid flow foundation: shelter deployment, extraction, death handling, respawn confirmation, and raid result UI
+- Added player starting loadout support for raid testing
+- Added enemy spawn points, enemy spawn manager, and editor tooling for enemy placement
+- Added enemy loadout generation for militia and mercenary enemy types
+- Added enemy equipment visuals so enemies display their generated armor, backpack, helmet, and weapon loadouts
+- Added enemy corpse search/loot flow with equipment, pocket, rig, backpack, and weapon slots
+- Improved respawn recovery so movement, health, ragdoll state, animator state, collision, and player controls are restored correctly
+- Updated weapon HUD to show the current weapon ammo type when armed
+- Improved raid/shelter UI behavior by hiding gameplay UI in result and interaction states
 
 ## v0.6.0 Update Highlights
 - Expanded the item pool with new weapons, armor tiers, backpacks, ammo, medical items, consumables, currency, and valuable loot
@@ -55,4 +66,4 @@ Top-down extraction shooter prototype made with Unity.
 
 ## Project Status
 - Playable prototype under active development
-- Current focus: enemy loot flow, enemy spawning, and extraction/shelter progression
+- Current focus: enemy combat variety, enemy loot tuning, raid progression, and shelter systems
